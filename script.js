@@ -35,33 +35,84 @@ function fallbackCopyTextToClipboard(text) {
     document.body.removeChild(textArea);
 }
 
-// Say Hi Funktionalität
+// Say Hi Funktionalität mit Firebase
 let hiCount = 0;
+let unsubscribeHiCount = null;
 
-function sayHi() {
-    hiCount++;
-    document.getElementById('hiCount').textContent = hiCount;
-    
-    // Speichere den Counter im localStorage
-    localStorage.setItem('hiCount', hiCount);
-    
-    // Zeige Animation
-    showNotification("Hi zurück! 👋✨");
-    
-    // Button Animation
-    const btn = document.querySelector('.say-hi-btn');
-    btn.style.transform = 'scale(0.95)';
-    setTimeout(() => {
-        btn.style.transform = '';
-    }, 150);
+async function sayHi() {
+    try {
+        const hiCountRef = window.firestore.doc(window.db, 'counters', 'hiCount');
+        
+        // Counter in Firestore erhöhen
+        await window.firestore.updateDoc(hiCountRef, {
+            count: window.firestore.increment(1)
+        });
+        
+        // Zeige Animation
+        showNotification("Hi zurück! 👋✨", 'success');
+        
+        // Button Animation
+        const btn = document.querySelector('.say-hi-btn');
+        btn.style.transform = 'scale(0.95)';
+        setTimeout(() => {
+            btn.style.transform = '';
+        }, 150);
+        
+    } catch (error) {
+        console.error('Fehler beim Aktualisieren des Hi-Counters:', error);
+        
+        // Fallback auf localStorage
+        hiCount++;
+        document.getElementById('hiCount').textContent = hiCount;
+        localStorage.setItem('hiCount', hiCount);
+        
+        showNotification("Hi zurück! 👋 (Offline)", 'default');
+    }
 }
 
-// Lade gespeicherten Hi-Counter
-function loadHiCount() {
+// Lade und überwache Hi-Counter von Firebase
+async function loadHiCount() {
+    try {
+        const hiCountRef = window.firestore.doc(window.db, 'counters', 'hiCount');
+        
+        // Erstelle Dokument falls es nicht existiert
+        const docSnap = await window.firestore.getDoc(hiCountRef);
+        if (!docSnap.exists()) {
+            await window.firestore.setDoc(hiCountRef, { count: 0 });
+        }
+        
+        // Echtzeitaktualisierungen überwachen
+        unsubscribeHiCount = window.firestore.onSnapshot(hiCountRef, (doc) => {
+            if (doc.exists()) {
+                hiCount = doc.data().count;
+                document.getElementById('hiCount').textContent = hiCount;
+            }
+        }, (error) => {
+            console.error('Fehler beim Überwachen des Hi-Counters:', error);
+            // Fallback auf localStorage
+            loadHiCountFromLocal();
+        });
+        
+    } catch (error) {
+        console.error('Fehler beim Laden des Hi-Counters:', error);
+        // Fallback auf localStorage
+        loadHiCountFromLocal();
+    }
+}
+
+// Fallback: Lade Hi-Counter aus localStorage
+function loadHiCountFromLocal() {
     const saved = localStorage.getItem('hiCount');
     if (saved) {
         hiCount = parseInt(saved);
         document.getElementById('hiCount').textContent = hiCount;
+    }
+}
+
+// Cleanup beim Verlassen der Seite
+function cleanup() {
+    if (unsubscribeHiCount) {
+        unsubscribeHiCount();
     }
 }
 
@@ -171,7 +222,10 @@ function showNotification(message, type = 'default') {
 
 // Page Load Animation
 document.addEventListener('DOMContentLoaded', function() {
-    loadHiCount();
+    // Warte auf Firebase-Initialisierung
+    setTimeout(() => {
+        loadHiCount();
+    }, 100);
     
     // Staggered animation for cards
     const cards = document.querySelectorAll('.profile-card, .about-card, .social-card');
@@ -192,4 +246,7 @@ document.addEventListener('DOMContentLoaded', function() {
             closeModal();
         }
     });
+    
+    // Cleanup beim Verlassen der Seite
+    window.addEventListener('beforeunload', cleanup);
 });
