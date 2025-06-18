@@ -1,6 +1,6 @@
 // Kontakt-Information kopieren
 function copyContact() {
-    const contactInfo = "deine-email@example.com"; // Ändere dies zu deiner echten E-Mail
+    const contactInfo = "lian@example.com"; // Ändere dies zu deiner echten E-Mail
     
     if (navigator.clipboard) {
         navigator.clipboard.writeText(contactInfo).then(() => {
@@ -74,15 +74,20 @@ function showModal(type) {
     
     if (type === 'impressum') {
         content = `
-            <h2>Impressum</h2>
-            <p>Diese Seite dient nur zu Demonstrationszwecken.</p>
-            <p>Kontakt: deine-email@example.com</p>
+            <h2 style="color: var(--accent-primary); margin-bottom: 1.5rem;">Impressum</h2>
+            <p style="margin-bottom: 1rem;">Diese persönliche Seite dient zur Selbstpräsentation.</p>
+            <p style="margin-bottom: 1rem;"><strong>Verantwortlich:</strong> Lian</p>
+            <p style="margin-bottom: 1rem;"><strong>Kontakt:</strong> lian@example.com</p>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Diese Seite ist nicht-kommerziell und dient nur zu Informationszwecken.</p>
         `;
     } else if (type === 'privacy') {
         content = `
-            <h2>Privacy Policy</h2>
-            <p>Diese Seite sammelt keine persönlichen Daten.</p>
-            <p>Wir verwenden nur localStorage für den Hi-Counter.</p>
+            <h2 style="color: var(--accent-primary); margin-bottom: 1.5rem;">Privacy Policy</h2>
+            <p style="margin-bottom: 1rem;">Diese Seite respektiert deine Privatsphäre.</p>
+            <p style="margin-bottom: 1rem;"><strong>Datensammlung:</strong> Wir sammeln keine persönlichen Daten.</p>
+            <p style="margin-bottom: 1rem;"><strong>Cookies:</strong> Wir verwenden nur localStorage für den Hi-Counter.</p>
+            <p style="margin-bottom: 1rem;"><strong>Externe Links:</strong> Links zu Social Media Plattformen unterliegen deren Datenschutzbestimmungen.</p>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Bei Fragen kontaktiere mich gerne.</p>
         `;
     }
     
@@ -103,26 +108,47 @@ function closeModal() {
     }, 300);
 }
 
-// Benachrichtigungen
-function showNotification(message) {
-    // Erstelle Benachrichtigung
+// Smooth scrolling für Anchor-Links
+function smoothScrollTo(elementId) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start'
+        });
+    }
+}
+
+// Erweiterte Benachrichtigungen mit verschiedenen Typen
+function showNotification(message, type = 'default') {
     const notification = document.createElement('div');
     notification.textContent = message;
+    
+    let bgGradient = 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))';
+    
+    if (type === 'success') {
+        bgGradient = 'linear-gradient(135deg, #00b894, #00cec9)';
+    } else if (type === 'error') {
+        bgGradient = 'linear-gradient(135deg, #e17055, #fd79a8)';
+    }
+    
     notification.style.cssText = `
         position: fixed;
         top: 20px;
         right: 20px;
-        background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+        background: ${bgGradient};
         color: white;
-        padding: 12px 20px;
-        border-radius: 12px;
+        padding: 16px 24px;
+        border-radius: 16px;
         font-size: 14px;
-        font-weight: 500;
+        font-weight: 600;
         z-index: 1001;
         transform: translateX(100%);
-        transition: transform 0.3s ease;
-        box-shadow: 0 5px 15px rgba(108, 92, 231, 0.3), 0 0 20px rgba(108, 92, 231, 0.2);
-        border: 1px solid rgba(108, 92, 231, 0.3);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), 0 0 30px rgba(108, 92, 231, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        max-width: 300px;
     `;
     
     document.body.appendChild(notification);
@@ -132,15 +158,15 @@ function showNotification(message) {
         notification.style.transform = 'translateX(0)';
     }, 10);
     
-    // Slide out after 3 seconds
+    // Slide out after 4 seconds
     setTimeout(() => {
         notification.style.transform = 'translateX(100%)';
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.parentNode.removeChild(notification);
             }
-        }, 300);
-    }, 3000);
+        }, 400);
+    }, 4000);
 }
 
 // Page Load Animation
