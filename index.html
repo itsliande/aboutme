@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Me - Dein Name</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="profile-card">
+            <div class="profile-header">
+                <div class="profile-image">
+                    <img src="https://via.placeholder.com/150" alt="Profilbild" id="profileImg">
+                </div>
+                <h1 class="name">Dein Name</h1>
+                <p class="title">Dein Titel/Beruf</p>
+            </div>
+            
+            <div class="profile-content">
+                <div class="bio">
+                    <p>Hey! 👋 Hier ist eine kurze Beschreibung über dich. Was machst du gerne? Was sind deine Interessen?</p>
+                </div>
+                
+                <div class="stats">
+                    <div class="stat">
+                        <span class="stat-number">23</span>
+                        <span class="stat-label">Jahre</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">🎮</span>
+                        <span class="stat-label">Gaming</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">💻</span>
+                        <span class="stat-label">Coding</span>
+                    </div>
+                </div>
+                
+                <div class="social-links">
+                    <a href="#" class="social-link discord" title="Discord">
+                        <i class="fab fa-discord"></i>
+                    </a>
+                    <a href="#" class="social-link instagram" title="Instagram">
+                        <i class="fab fa-instagram"></i>
+                    </a>
+                    <a href="#" class="social-link github" title="GitHub">
+                        <i class="fab fa-github"></i>
+                    </a>
+                    <a href="#" class="social-link twitter" title="Twitter">
+                        <i class="fab fa-twitter"></i>
+                    </a>
+                </div>
+                
+                <div class="contact-button">
+                    <button class="btn-contact" onclick="copyContact()">
+                        <i class="fas fa-envelope"></i>
+                        Kontakt kopieren
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
