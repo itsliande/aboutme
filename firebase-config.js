@@ -1,6 +1,6 @@
-// Firebase Konfiguration - Ersetze mit deinen eigenen Werten
+// Firebase Konfiguration - Verwendet FIREBASE_API Secret
 const firebaseConfig = {
-    apiKey: "AIzaSyAj1VyMdSTz76GXrVN-QS_rFd2oUdz-D4Y",
+    apiKey: process.env.FIREBASE_API,
     authDomain: "aboutme-49bfb.firebaseapp.com",
     projectId: "aboutme-49bfb",
     storageBucket: "aboutme-49bfb.firebasestorage.app",
