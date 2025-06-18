@@ -112,7 +112,7 @@ function showNotification(message) {
         position: fixed;
         top: 20px;
         right: 20px;
-        background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+        background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
         color: white;
         padding: 12px 20px;
         border-radius: 12px;
@@ -121,7 +121,8 @@ function showNotification(message) {
         z-index: 1001;
         transform: translateX(100%);
         transition: transform 0.3s ease;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 5px 15px rgba(108, 92, 231, 0.3), 0 0 20px rgba(108, 92, 231, 0.2);
+        border: 1px solid rgba(108, 92, 231, 0.3);
     `;
     
     document.body.appendChild(notification);
