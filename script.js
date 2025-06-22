@@ -131,6 +131,15 @@ async function loadHiCount() {
     }
 }
 
+// Fallback: Lade Hi-Counter aus localStorage
+function loadHiCountFromLocal() {
+    const saved = localStorage.getItem('hiCount');
+    if (saved) {
+        hiCount = parseInt(saved);
+        document.getElementById('hiCount').textContent = hiCount;
+    }
+}
+
 // Counter-Animation
 function animateCounter() {
     const counterElement = document.getElementById('hiCount');
