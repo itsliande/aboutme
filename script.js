@@ -41,11 +41,21 @@ let unsubscribeHiCount = null;
 let firebaseReady = false;
 
 async function sayHi() {
+    // Überprüfe tägliches Limit
+    if (!canSayHiToday()) {
+        showNotification("Du hast heute schon Hi gesagt! 😊 Komm morgen wieder.", 'default');
+        return;
+    }
+
     if (!firebaseReady || !window.firestoreDb) {
         // Fallback auf localStorage wenn Firebase nicht verfügbar
         hiCount++;
         document.getElementById('hiCount').textContent = hiCount;
         localStorage.setItem('hiCount', hiCount);
+        
+        // Markiere als "Hi gesagt" für heute
+        markHiSaidToday();
+        
         showNotification("Hi zurück! 👋 (Offline)", 'default');
         
         // Button Animation
@@ -66,6 +76,9 @@ async function sayHi() {
             lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
         });
         
+        // Markiere als "Hi gesagt" für heute
+        markHiSaidToday();
+        
         // Zeige Animation
         showNotification("Hi zurück! 👋✨", 'success');
         
@@ -83,6 +96,9 @@ async function sayHi() {
         hiCount++;
         document.getElementById('hiCount').textContent = hiCount;
         localStorage.setItem('hiCount', hiCount);
+        
+        // Markiere als "Hi gesagt" für heute
+        markHiSaidToday();
         
         showNotification("Hi zurück! 👋 (Offline)", 'default');
     }
@@ -263,6 +279,53 @@ function showNotification(message, type = 'default') {
     }, 4000);
 }
 
+// Tägliches Hi-Limit Funktionen
+function canSayHiToday() {
+    const lastHiDate = localStorage.getItem('lastHiDate');
+    const today = new Date().toDateString();
+    
+    if (!lastHiDate || lastHiDate !== today) {
+        return true; // Kann Hi sagen
+    }
+    
+    return false; // Bereits heute Hi gesagt
+}
+
+function markHiSaidToday() {
+    const today = new Date().toDateString();
+    localStorage.setItem('lastHiDate', today);
+    updateHiButtonState();
+}
+
+function updateHiButtonState() {
+    const btn = document.querySelector('.say-hi-btn');
+    const canSayHi = canSayHiToday();
+    
+    if (!canSayHi) {
+        btn.disabled = true;
+        btn.classList.add('disabled');
+        btn.innerHTML = '<i class="fas fa-check"></i> Du hast heute schon Hi gesagt!';
+    } else {
+        btn.disabled = false;
+        btn.classList.remove('disabled');
+        btn.innerHTML = '<i class="fas fa-hand-sparkles"></i> Say Hi!';
+    }
+}
+
+// Countdown bis zum nächsten Hi
+function getTimeUntilNextHi() {
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    
+    const diff = tomorrow - now;
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return { hours, minutes };
+}
+
 // Page Load Animation
 document.addEventListener('DOMContentLoaded', function() {
     // Firebase Status sofort prüfen
@@ -274,6 +337,9 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.log('⏳ Warte auf Firebase...');
     }
+    
+    // Button-Status beim Laden überprüfen
+    updateHiButtonState();
     
     // Staggered animation for cards
     const cards = document.querySelectorAll('.profile-card, .about-card, .social-card');
