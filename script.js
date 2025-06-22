@@ -38,14 +38,32 @@ function fallbackCopyTextToClipboard(text) {
 // Say Hi Funktionalität mit Firebase
 let hiCount = 0;
 let unsubscribeHiCount = null;
+let firebaseReady = false;
 
 async function sayHi() {
+    if (!firebaseReady || !window.firestoreDb) {
+        // Fallback auf localStorage wenn Firebase nicht verfügbar
+        hiCount++;
+        document.getElementById('hiCount').textContent = hiCount;
+        localStorage.setItem('hiCount', hiCount);
+        showNotification("Hi zurück! 👋 (Offline)", 'default');
+        
+        // Button Animation
+        const btn = document.querySelector('.say-hi-btn');
+        btn.style.transform = 'scale(0.95)';
+        setTimeout(() => {
+            btn.style.transform = '';
+        }, 150);
+        return;
+    }
+
     try {
-        const hiCountRef = window.firestore.doc(window.db, 'counters', 'hiCount');
+        const hiCountRef = window.firestoreDb.collection('counters').doc('hiCount');
         
         // Counter in Firestore erhöhen
-        await window.firestore.updateDoc(hiCountRef, {
-            count: window.firestore.increment(1)
+        await hiCountRef.update({
+            count: firebase.firestore.FieldValue.increment(1),
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
         });
         
         // Zeige Animation
@@ -72,20 +90,33 @@ async function sayHi() {
 
 // Lade und überwache Hi-Counter von Firebase
 async function loadHiCount() {
+    if (!firebaseReady || !window.firestoreDb) {
+        // Fallback auf localStorage
+        loadHiCountFromLocal();
+        return;
+    }
+
     try {
-        const hiCountRef = window.firestore.doc(window.db, 'counters', 'hiCount');
+        const hiCountRef = window.firestoreDb.collection('counters').doc('hiCount');
         
         // Erstelle Dokument falls es nicht existiert
-        const docSnap = await window.firestore.getDoc(hiCountRef);
-        if (!docSnap.exists()) {
-            await window.firestore.setDoc(hiCountRef, { count: 0 });
+        const docSnap = await hiCountRef.get();
+        if (!docSnap.exists) {
+            await hiCountRef.set({ 
+                count: 0,
+                created: firebase.firestore.FieldValue.serverTimestamp()
+            });
         }
         
         // Echtzeitaktualisierungen überwachen
-        unsubscribeHiCount = window.firestore.onSnapshot(hiCountRef, (doc) => {
-            if (doc.exists()) {
-                hiCount = doc.data().count;
+        unsubscribeHiCount = hiCountRef.onSnapshot((doc) => {
+            if (doc.exists) {
+                const data = doc.data();
+                hiCount = data.count || 0;
                 document.getElementById('hiCount').textContent = hiCount;
+                
+                // Animiere Counter bei Änderung
+                animateCounter();
             }
         }, (error) => {
             console.error('Fehler beim Überwachen des Hi-Counters:', error);
@@ -98,6 +129,18 @@ async function loadHiCount() {
         // Fallback auf localStorage
         loadHiCountFromLocal();
     }
+}
+
+// Counter-Animation
+function animateCounter() {
+    const counterElement = document.getElementById('hiCount');
+    counterElement.style.transform = 'scale(1.2)';
+    counterElement.style.color = 'var(--accent-primary)';
+    
+    setTimeout(() => {
+        counterElement.style.transform = 'scale(1)';
+        counterElement.style.color = '';
+    }, 300);
 }
 
 // Fallback: Lade Hi-Counter aus localStorage
@@ -222,11 +265,6 @@ function showNotification(message, type = 'default') {
 
 // Page Load Animation
 document.addEventListener('DOMContentLoaded', function() {
-    // Warte auf Firebase-Initialisierung
-    setTimeout(() => {
-        loadHiCount();
-    }, 100);
-    
     // Staggered animation for cards
     const cards = document.querySelectorAll('.profile-card, .about-card, .social-card');
     cards.forEach((card, index) => {
@@ -250,3 +288,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Cleanup beim Verlassen der Seite
     window.addEventListener('beforeunload', cleanup);
 });
+
+// Firebase Ready Event Listener
+window.addEventListener('firebaseReady', function() {
+    firebaseReady = true;
+    console.log('Firebase ist bereit - lade Hi-Counter');
+    loadHiCount();
+});
+
+// Fallback falls Firebase nicht lädt
+setTimeout(() => {
+    if (!firebaseReady) {
+        console.log('Firebase Fallback - verwende localStorage');
+        loadHiCountFromLocal();
+    }
+}, 2000);
