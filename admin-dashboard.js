@@ -516,7 +516,7 @@
         }
     }
 
-    // About Me Items verwalten
+    // About Me Items verwalten - Verbesserte Version
     function loadAboutItems(items) {
         const aboutItemsList = document.getElementById('aboutItemsList');
         if (!aboutItemsList) return;
@@ -525,8 +525,8 @@
 
         if (items && items.length > 0) {
             items.forEach((item, index) => {
-                const itemElement = createAboutItemEditor(index, item.icon, item.text);
-                aboutItemsList.appendChild(itemElement);
+                const itemEditor = createAboutItemEditor(index, item.icon, item.text);
+                aboutItemsList.appendChild(itemEditor);
             });
         } else {
             // Füge ein leeres Item hinzu wenn keine Items vorhanden sind
@@ -534,8 +534,10 @@
             aboutItemsList.appendChild(emptyItem);
         }
 
-        setupRemoveItemListeners();
-        setupIconPreview();
+        // Setup Event Listeners nach dem Laden mit Delay
+        setTimeout(() => {
+            setupAboutItemsEventListeners();
+        }, 100);
     }
 
     function createAboutItemEditor(index, icon = '', text = '') {
@@ -546,7 +548,7 @@
         div.innerHTML = `
             <div class="about-item-editor-header">
                 <h4><i class="fas fa-grip-vertical"></i> About Item ${index + 1}</h4>
-                <button type="button" class="admin-btn danger small remove-item-btn" title="Item entfernen">
+                <button type="button" class="admin-btn danger small remove-item-btn" data-index="${index}" title="Item entfernen">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
@@ -591,6 +593,66 @@
         return div;
     }
 
+    // Zentrale Event Listener Setup Funktion
+    function setupAboutItemsEventListeners() {
+        // Remove Button Event Listeners
+        document.querySelectorAll('.remove-item-btn').forEach(button => {
+            button.removeEventListener('click', handleRemoveItem); // Entferne alte Listener
+            button.addEventListener('click', handleRemoveItem);
+        });
+
+        // Icon Input Event Listeners
+        document.querySelectorAll('.about-icon').forEach(input => {
+            input.removeEventListener('input', handleIconInput); // Entferne alte Listener
+            input.addEventListener('input', handleIconInput);
+        });
+
+        console.log('✅ About Items Event Listeners setup');
+    }
+
+    // Event Handler Funktionen
+    function handleRemoveItem(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const aboutItemsList = document.getElementById('aboutItemsList');
+        const currentItems = aboutItemsList.querySelectorAll('.about-item-editor');
+        
+        if (currentItems.length <= 1) {
+            showNotification('Mindestens ein About Item ist erforderlich', 'warning');
+            return;
+        }
+
+        if (!confirm('Dieses About Item wirklich entfernen?')) {
+            return;
+        }
+
+        const itemEditor = e.target.closest('.about-item-editor');
+        if (itemEditor) {
+            // Smooth Animation beim Entfernen
+            itemEditor.style.transition = 'all 0.3s ease';
+            itemEditor.style.opacity = '0';
+            itemEditor.style.transform = 'translateY(-20px)';
+            
+            setTimeout(() => {
+                itemEditor.remove();
+                updateItemIndices();
+                setupAboutItemsEventListeners(); // Event Listeners neu setup
+                showNotification('About Item entfernt', 'success');
+            }, 300);
+        }
+    }
+
+    function handleIconInput(e) {
+        const input = e.target;
+        const index = input.getAttribute('data-index');
+        const preview = document.getElementById(`icon-preview-${index}`);
+        
+        if (preview) {
+            updateIconPreview(input, preview);
+        }
+    }
+
     function addAboutItem() {
         const aboutItemsList = document.getElementById('aboutItemsList');
         if (!aboutItemsList) {
@@ -621,193 +683,54 @@
             newItem.style.transform = 'translateY(0)';
         }, 10);
 
-        setupRemoveItemListeners();
-        setupIconPreview();
         updateItemIndices();
+        setupAboutItemsEventListeners(); // Event Listeners neu setup
         
         // Focus auf das Icon-Feld des neuen Items
-        const iconInput = newItem.querySelector('.about-icon');
-        if (iconInput) {
-            iconInput.focus();
-            iconInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+        setTimeout(() => {
+            const iconInput = newItem.querySelector('.about-icon');
+            if (iconInput) {
+                iconInput.focus();
+                iconInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 350);
 
         showNotification('Neues About Item hinzugefügt', 'success');
     }
 
-    function setupRemoveItemListeners() {
-        // Entferne alle existierenden Event Listener
-        const removeButtons = document.querySelectorAll('.remove-item-btn');
-        removeButtons.forEach(button => {
-            // Clone Button um alte Event Listener zu entfernen
-            const newButton = button.cloneNode(true);
-            button.parentNode.replaceChild(newButton, button);
-        });
-
-        // Füge neue Event Listener hinzu
-        document.querySelectorAll('.remove-item-btn').forEach(button => {
-            button.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                const itemEditor = e.target.closest('.about-item-editor');
-                if (!itemEditor) return;
-
-                const itemsList = document.getElementById('aboutItemsList');
-                const remainingItems = itemsList.querySelectorAll('.about-item-editor');
-                
-                // Mindestens ein Item muss bleiben
-                if (remainingItems.length <= 1) {
-                    showNotification('Mindestens ein About Item muss vorhanden sein', 'warning');
-                    return;
-                }
-
-                // Bestätigung für das Löschen
-                const textInput = itemEditor.querySelector('.about-text');
-                const text = textInput ? textInput.value.trim() : '';
-                
-                if (text && !confirm(`Item "${text.substring(0, 30)}${text.length > 30 ? '...' : ''}" wirklich löschen?`)) {
-                    return;
-                }
-
-                // Smooth Animation beim Entfernen
-                itemEditor.style.transition = 'all 0.3s ease';
-                itemEditor.style.opacity = '0';
-                itemEditor.style.transform = 'translateX(-20px)';
-                
-                setTimeout(() => {
-                    if (itemEditor.parentNode) {
-                        itemEditor.remove();
-                        updateItemIndices();
-                        showNotification('About Item entfernt', 'success');
-                    }
-                }, 300);
-            });
-        });
-    }
-
-    function setupIconPreview() {
-        // Setup Icon Preview für alle Icon-Inputs
-        document.querySelectorAll('.about-icon').forEach(input => {
-            // Entferne existierende Event Listener
-            const newInput = input.cloneNode(true);
-            input.parentNode.replaceChild(newInput, input);
-            
-            const index = newInput.getAttribute('data-index') || newInput.id.split('-').pop();
-            const preview = document.getElementById(`icon-preview-${index}`);
-            
-            if (preview) {
-                // Sofortige Vorschau beim Laden
-                updateIconPreview(newInput, preview);
-                
-                // Event Listener für Live-Vorschau
-                newInput.addEventListener('input', () => {
-                    updateIconPreview(newInput, preview);
-                });
-                
-                newInput.addEventListener('blur', () => {
-                    updateIconPreview(newInput, preview);
-                });
-            }
-        });
-    }
-
-    function updateIconPreview(input, preview) {
-        const iconClass = input.value.trim();
-        
-        if (iconClass) {
-            // Validiere Font Awesome Klasse
-            if (iconClass.match(/^(fas|far|fab|fal|fad|fat)\s+fa-[\w-]+$/)) {
-                preview.innerHTML = `<i class="${iconClass}"></i>`;
-                preview.className = 'icon-preview valid';
-                input.classList.remove('error');
-            } else {
-                preview.innerHTML = `<i class="fas fa-exclamation-triangle"></i>`;
-                preview.className = 'icon-preview invalid';
-                input.classList.add('error');
-            }
-        } else {
-            preview.innerHTML = `<i class="fas fa-question"></i>`;
-            preview.className = 'icon-preview empty';
-            input.classList.remove('error');
-        }
-    }
-
-    function updateItemIndices() {
-        const itemEditors = document.querySelectorAll('.about-item-editor');
-        itemEditors.forEach((editor, index) => {
-            editor.setAttribute('data-index', index);
-            
-            // Update Header
-            const header = editor.querySelector('h4');
-            if (header) {
-                header.innerHTML = `<i class="fas fa-grip-vertical"></i> About Item ${index + 1}`;
-            }
-            
-            // Update IDs und Labels
-            const iconInput = editor.querySelector('.about-icon');
-            const textInput = editor.querySelector('.about-text');
-            const iconLabel = editor.querySelector('label[for^="about-icon"]');
-            const textLabel = editor.querySelector('label[for^="about-text"]');
-            const iconPreview = editor.querySelector('.icon-preview');
-            
-            if (iconInput) {
-                iconInput.id = `about-icon-${index}`;
-                iconInput.setAttribute('data-index', index);
-            }
-            if (textInput) {
-                textInput.id = `about-text-${index}`;
-            }
-            if (iconLabel) {
-                iconLabel.setAttribute('for', `about-icon-${index}`);
-            }
-            if (textLabel) {
-                textLabel.setAttribute('for', `about-text-${index}`);
-            }
-            if (iconPreview) {
-                iconPreview.id = `icon-preview-${index}`;
-            }
-        });
-        
-        // Setup Icon Preview nach Index-Update
-        setupIconPreview();
-    }
-
-    function setDefaultAboutItems() {
-        const defaultItems = [
-            { icon: 'fas fa-rainbow', text: 'Demigirl or Nonbinary Transfem\'ig ldrk and Bi-sexual' },
-            { icon: 'fas fa-heart', text: 'YU Fan (nazis call it linksversifft)' },
-            { icon: 'fas fa-headphones', text: 'Professional listener' },
-            { icon: 'fas fa-star', text: 'Extremely Gay' },
-            { icon: 'fas fa-camera-retro', text: 'Look at my Insta and Pronoun Page' }
-        ];
-
-        loadAboutItems(defaultItems);
-        console.log('✅ Standard About-Items gesetzt');
-    }
-
-    // About Me Update verarbeiten
+    // About-Update verarbeiten
     async function handleUpdateAbout() {
         if (!db) {
             showNotification('Keine Datenbank-Verbindung', 'error');
             return;
         }
 
-        const aboutItemEditors = document.querySelectorAll('.about-item-editor');
+        const aboutItemsList = document.getElementById('aboutItemsList');
+        if (!aboutItemsList) {
+            showNotification('About Items Liste nicht gefunden', 'error');
+            return;
+        }
+
         const items = [];
+        const itemEditors = aboutItemsList.querySelectorAll('.about-item-editor');
 
-        // Sammle alle About-Items
-        aboutItemEditors.forEach(editor => {
-            const icon = editor.querySelector('.about-icon').value.trim();
-            const text = editor.querySelector('.about-text').value.trim();
-
-            if (icon && text) {
-                items.push({ icon, text });
+        // Sammle alle Items
+        itemEditors.forEach((editor, index) => {
+            const iconInput = editor.querySelector('.about-icon');
+            const textInput = editor.querySelector('.about-text');
+            
+            if (iconInput && textInput) {
+                const icon = iconInput.value.trim();
+                const text = textInput.value.trim();
+                
+                if (icon && text) {
+                    items.push({ icon, text });
+                }
             }
         });
 
         if (items.length === 0) {
-            showNotification('Mindestens ein About-Item ist erforderlich', 'error');
+            showNotification('Mindestens ein About Item ist erforderlich', 'error');
             return;
         }
 
@@ -827,17 +750,17 @@
 
             await db.collection('content').doc('aboutItems').set(aboutData, { merge: true });
 
-            // Log nur wenn möglich
+            // Log
             try {
-                await logAdminActivity('about_items_updated', { itemCount: items.length });
+                await logAdminActivity('about_updated', { itemCount: items.length });
             } catch (logError) {
                 console.warn('Logging fehlgeschlagen:', logError.message);
             }
 
             showNotification('About Me Items erfolgreich aktualisiert', 'success');
 
-            // Update main website immediately if same domain
-            updateMainWebsite('about', { items });
+            // Update main website immediately
+            updateMainWebsite('about', aboutData);
 
             // Force reload content on main website if possible
             if (window.opener && !window.opener.closed) {
@@ -849,15 +772,20 @@
                 }
             }
 
+            // Reload items to ensure consistency (WICHTIG: Dies verhindert das Kaputtgehen!)
+            setTimeout(() => {
+                loadAboutItems(items);
+            }, 500);
+
         } catch (error) {
-            console.error('Fehler beim Aktualisieren der About-Items:', error);
+            console.error('Fehler beim Aktualisieren der About Items:', error);
             
             if (error.code === 'permission-denied') {
                 showNotification('Keine Berechtigung zum Aktualisieren der About-Daten', 'error');
             } else if (error.code === 'unavailable') {
                 showNotification('Firestore ist momentan nicht verfügbar', 'error');
             } else {
-                showNotification('Fehler beim Aktualisieren der About-Items: ' + error.message, 'error');
+                showNotification('Fehler beim Aktualisieren der About Items: ' + error.message, 'error');
             }
         } finally {
             // Reset button
@@ -868,342 +796,112 @@
         }
     }
 
-    // Update main website content (if on same domain)
-    function updateMainWebsite(type, data) {
-        try {
-            if (type === 'profile') {
-                // Update if elements exist (for testing on same domain)
-                const nameEl = document.querySelector('.name');
-                const pronounsEl = document.querySelector('.pronouns');
-                const avatarEl = document.querySelector('.avatar');
+    // Helper Functions für About Items
+    function updateItemIndices() {
+        const aboutItemsList = document.getElementById('aboutItemsList');
+        if (!aboutItemsList) return;
 
-                if (nameEl && data.name) nameEl.textContent = data.name;
-                if (pronounsEl && data.pronouns) pronounsEl.textContent = data.pronouns;
-                if (avatarEl && data.avatarUrl) avatarEl.src = data.avatarUrl;
+        const items = aboutItemsList.querySelectorAll('.about-item-editor');
+        items.forEach((item, index) => {
+            item.setAttribute('data-index', index);
+            
+            // Update header
+            const header = item.querySelector('.about-item-editor-header h4');
+            if (header) {
+                header.innerHTML = `<i class="fas fa-grip-vertical"></i> About Item ${index + 1}`;
             }
+            
+            // Update IDs
+            const iconInput = item.querySelector('.about-icon');
+            const textInput = item.querySelector('.about-text');
+            const preview = item.querySelector('.icon-preview');
+            const removeBtn = item.querySelector('.remove-item-btn');
+            
+            if (iconInput) {
+                iconInput.id = `about-icon-${index}`;
+                iconInput.setAttribute('data-index', index);
+            }
+            if (textInput) {
+                textInput.id = `about-text-${index}`;
+            }
+            if (preview) {
+                preview.id = `icon-preview-${index}`;
+            }
+            if (removeBtn) {
+                removeBtn.setAttribute('data-index', index);
+            }
+        });
+    }
 
-            if (type === 'links') {
-                // Update social links if elements exist
-                const socialBtns = document.querySelectorAll('.social-btn');
-                socialBtns.forEach(btn => {
-                    if (btn.classList.contains('instagram') && data.instagram) {
-                        btn.href = data.instagram;
-                    }
-                    if (btn.classList.contains('pronoun') && data.pronounPage) {
-                        btn.href = data.pronounPage;
-                    }
-                    if (btn.classList.contains('spotify') && data.spotify) {
-                        btn.href = data.spotify;
-                    }
-                });
+    function updateIconPreview(input, preview) {
+        const iconClass = input.value.trim();
+        
+        if (iconClass) {
+            try {
+                preview.innerHTML = `<i class="${iconClass}"></i>`;
+                preview.className = 'icon-preview valid';
+            } catch (error) {
+                preview.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+                preview.className = 'icon-preview invalid';
             }
-
-            if (type === 'about') {
-                // Update About Me items if elements exist
-                const aboutItemsList = document.getElementById('aboutItemsList');
-                if (aboutItemsList) {
-                    aboutItemsList.innerHTML = '';
-                    data.items.forEach(item => {
-                        const itemElement = document.createElement('div');
-                        itemElement.className = 'about-item';
-                        itemElement.innerHTML = `
-                            <i class="${item.icon}"></i>
-                            <span>${item.text}</span>
-                        `;
-                        aboutItemsList.appendChild(itemElement);
-                    });
-                }
-            }
-        } catch (error) {
-            // Silent fail - main website might not be accessible
-            console.log('Main website update skipped:', error.message);
+        } else {
+            preview.innerHTML = '<i class="fas fa-question"></i>';
+            preview.className = 'icon-preview empty';
         }
     }
 
-    // Load existing content data
+    // Existierende Content-Daten laden
     async function loadExistingContent() {
-        if (!db) {
-            console.warn('Firebase nicht verfügbar - setze Fallback-Werte');
-            setFallbackContentValues();
-            return;
-        }
+        if (!db) return;
 
         try {
-            // Versuche zuerst Profile-Daten zu laden
-            try {
-                const profileDoc = await db.collection('content').doc('profile').get();
-                if (profileDoc.exists) {
-                    const data = profileDoc.data();
-                    const nameInput = document.getElementById('profileName');
-                    const pronounsInput = document.getElementById('profilePronouns');
-                    const avatarInput = document.getElementById('avatarUrl');
-                    
-                    if (nameInput && data.name) nameInput.value = data.name;
-                    if (pronounsInput && data.pronouns) pronounsInput.value = data.pronouns;
-                    if (avatarInput && data.avatarUrl) avatarInput.value = data.avatarUrl;
-                    
-                    console.log('✅ Profile-Daten geladen:', data);
+            // Profile-Daten laden
+            const profileDoc = await db.collection('content').doc('profile').get();
+            if (profileDoc.exists) {
+                const data = profileDoc.data();
+                console.log('Profile-Dokument geladen:', data);
+                
+                if (data.name) document.getElementById('profileName').value = data.name;
+                if (data.pronouns) document.getElementById('profilePronouns').value = data.pronouns;
+                if (data.avatarUrl) document.getElementById('avatarUrl').value = data.avatarUrl;
+            } else {
+                console.log('Profile-Dokument existiert noch nicht - wird beim ersten Speichern erstellt');
+            }
+
+            // Social Links laden
+            const linksDoc = await db.collection('content').doc('socialLinks').get();
+            if (linksDoc.exists) {
+                const data = linksDoc.data();
+                console.log('Social-Links-Dokument geladen:', data);
+                
+                if (data.instagram) document.getElementById('instagramLink').value = data.instagram;
+                if (data.pronounPage) document.getElementById('pronounPageLink').value = data.pronounPage;
+                if (data.spotify) document.getElementById('spotifyLink').value = data.spotify;
+            } else {
+                console.log('Social-Links-Dokument existiert noch nicht - wird beim ersten Speichern erstellt');
+            }
+
+            // About Items laden
+            const aboutDoc = await db.collection('content').doc('aboutItems').get();
+            if (aboutDoc.exists) {
+                const data = aboutDoc.data();
+                console.log('About-Items-Dokument geladen:', data);
+                
+                if (data.items && data.items.length > 0) {
+                    loadAboutItems(data.items);
                 } else {
-                    console.log('Profile-Dokument existiert noch nicht - wird beim ersten Speichern erstellt');
-                    setDefaultProfileValues();
+                    loadAboutItems([]);
                 }
-            } catch (profileError) {
-                console.warn('Profile-Daten konnten nicht geladen werden:', profileError.message);
-                setDefaultProfileValues();
-            }
-
-            // Versuche dann Links-Daten zu laden
-            try {
-                const linksDoc = await db.collection('content').doc('socialLinks').get();
-                if (linksDoc.exists) {
-                    const data = linksDoc.data();
-                    const instagramInput = document.getElementById('instagramLink');
-                    const pronounPageInput = document.getElementById('pronounPageLink');
-                    const spotifyInput = document.getElementById('spotifyLink');
-                    
-                    if (instagramInput && data.instagram) instagramInput.value = data.instagram;
-                    if (pronounPageInput && data.pronounPage) pronounPageInput.value = data.pronounPage;
-                    if (spotifyInput && data.spotify) spotifyInput.value = data.spotify;
-                    
-                    console.log('✅ Social-Links-Daten geladen:', data);
-                } else {
-                    console.log('Social-Links-Dokument existiert noch nicht - wird beim ersten Speichern erstellt');
-                    setDefaultLinksValues();
-                }
-            } catch (linksError) {
-                console.warn('Social-Links-Daten konnten nicht geladen werden:', linksError.message);
-                setDefaultLinksValues();
-            }
-
-            // About Me Items laden
-            try {
-                const aboutDoc = await db.collection('content').doc('aboutItems').get();
-                if (aboutDoc.exists) {
-                    const data = aboutDoc.data();
-                    if (data.items && Array.isArray(data.items)) {
-                        loadAboutItems(data.items);
-                        console.log('✅ About-Items-Daten geladen:', data.items);
-                    } else {
-                        console.log('About-Items-Dokument hat keine Items - setze Standard-Werte');
-                        setDefaultAboutItems();
-                    }
-                } else {
-                    console.log('About-Items-Dokument existiert noch nicht - wird beim ersten Speichern erstellt');
-                    setDefaultAboutItems();
-                }
-            } catch (aboutError) {
-                console.warn('About-Items-Daten konnten nicht geladen werden:', aboutError.message);
-                setDefaultAboutItems();
+            } else {
+                console.log('About-Items-Dokument existiert noch nicht - wird beim ersten Speichern erstellt');
+                loadAboutItems([]);
             }
 
         } catch (error) {
-            console.error('Allgemeiner Fehler beim Laden der Content-Daten:', error);
-            showNotification('Content-Daten konnten nicht geladen werden', 'warning');
-            setFallbackContentValues();
+            console.error('Fehler beim Laden der bestehenden Content-Daten:', error);
+            // Fallback: Leere Items laden
+            loadAboutItems([]);
         }
-    }
-
-    // Standard-Werte für Profile setzen
-    function setDefaultProfileValues() {
-        const nameInput = document.getElementById('profileName');
-        const pronounsInput = document.getElementById('profilePronouns');
-        const avatarInput = document.getElementById('avatarUrl');
-        
-        if (nameInput && !nameInput.value) {
-            nameInput.placeholder = 'Name eingeben...';
-            nameInput.value = 'Lian';
-        }
-        if (pronounsInput && !pronounsInput.value) {
-            pronounsInput.placeholder = 'Pronomen eingeben...';
-            pronounsInput.value = 'THEY/THEM (PREFERRED) OR IN GERMAN SHE/HER';
-        }
-        if (avatarInput && !avatarInput.value) {
-            avatarInput.placeholder = 'Avatar URL eingeben...';
-            avatarInput.value = '';
-        }
-    }
-
-    // Standard-Werte für Links setzen
-    function setDefaultLinksValues() {
-        const instagramInput = document.getElementById('instagramLink');
-        const pronounPageInput = document.getElementById('pronounPageLink');
-        const spotifyInput = document.getElementById('spotifyLink');
-        
-        if (instagramInput && !instagramInput.value) {
-            instagramInput.placeholder = 'Instagram URL eingeben...';
-            instagramInput.value = '';
-        }
-        if (pronounPageInput && !pronounPageInput.value) {
-            pronounPageInput.placeholder = 'Pronoun Page URL eingeben...';
-            pronounPageInput.value = '';
-        }
-        if (spotifyInput && !spotifyInput.value) {
-            spotifyInput.placeholder = 'Spotify URL eingeben...';
-            spotifyInput.value = '';
-        }
-    }
-
-    // Fallback-Werte setzen wenn Firebase nicht verfügbar ist
-    function setFallbackContentValues() {
-        try {
-            // Profile Fallback-Werte
-            const nameInput = document.getElementById('profileName');
-            const pronounsInput = document.getElementById('profilePronouns');
-            const avatarInput = document.getElementById('avatarUrl');
-            
-            if (nameInput && !nameInput.value) {
-                nameInput.placeholder = 'Name eingeben...';
-                nameInput.value = '';
-            }
-            if (pronounsInput && !pronounsInput.value) {
-                pronounsInput.placeholder = 'Pronomen eingeben...';
-                pronounsInput.value = '';
-            }
-            if (avatarInput && !avatarInput.value) {
-                avatarInput.placeholder = 'Avatar URL eingeben...';
-                avatarInput.value = '';
-            }
-
-            // Links Fallback-Werte
-            const instagramInput = document.getElementById('instagramLink');
-            const pronounPageInput = document.getElementById('pronounPageLink');
-            const spotifyInput = document.getElementById('spotifyLink');
-            
-            if (instagramInput && !instagramInput.value) {
-                instagramInput.placeholder = 'Instagram URL eingeben...';
-                instagramInput.value = '';
-            }
-            if (pronounPageInput && !pronounPageInput.value) {
-                pronounPageInput.placeholder = 'Pronoun Page URL eingeben...';
-                pronounPageInput.value = '';
-            }
-            if (spotifyInput && !spotifyInput.value) {
-                spotifyInput.placeholder = 'Spotify URL eingeben...';
-                spotifyInput.value = '';
-            }
-
-            console.log('✅ Fallback-Werte für Content Management gesetzt');
-        } catch (error) {
-            console.warn('⚠️ Fehler beim Setzen der Fallback-Werte:', error);
-        }
-    }
-
-    // Quick Actions einrichten
-    function setupQuickActions() {
-        const exportBtn = document.getElementById('exportDataBtn');
-        const clearLogsBtn = document.getElementById('clearLogsBtn');
-        const testBtn = document.getElementById('testSystemBtn');
-
-        if (exportBtn) {
-            exportBtn.addEventListener('click', () => {
-                showNotification('Export-Funktion in Entwicklung', 'info');
-            });
-        }
-
-        if (clearLogsBtn) {
-            clearLogsBtn.addEventListener('click', () => {
-                if (confirm('Wirklich alle Logs löschen?')) {
-                    showNotification('Logs gelöscht', 'success');
-                }
-            });
-        }
-
-        if (testBtn) {
-            testBtn.addEventListener('click', () => {
-                checkSystemStatus();
-                showNotification('System-Test abgeschlossen', 'success');
-            });
-        }
-    }
-
-    // Logout behandeln
-    async function handleLogout() {
-        if (!auth) return;
-
-        try {
-            await logAdminActivity('admin_logout');
-            await auth.signOut();
-            console.log('✅ Admin abgemeldet');
-        } catch (error) {
-            console.error('❌ Logout-Fehler:', error);
-        }
-    }
-
-    // Counter zurücksetzen
-    async function handleResetCounter() {
-        if (!db || !confirm('Hi-Counter wirklich auf 0 zurücksetzen?')) return;
-
-        try {
-            const hiCountRef = db.collection('counters').doc('hiCount');
-            await hiCountRef.update({
-                count: 0,
-                lastReset: firebase.firestore.FieldValue.serverTimestamp(),
-                resetBy: currentUser.email
-            });
-
-            await logAdminActivity('counter_reset', { previousCount: 'unknown' });
-            showNotification('Hi-Counter zurückgesetzt', 'success');
-
-        } catch (error) {
-            console.error('Fehler beim Zurücksetzen:', error);
-            showNotification('Fehler beim Zurücksetzen', 'error');
-        }
-    }
-
-    // Admin-Aktivität protokollieren
-    async function logAdminActivity(action, data = {}) {
-        if (!db || !currentUser) return;
-
-        try {
-            await db.collection('admin_logs').add({
-                action,
-                user: currentUser.email,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                data,
-                userAgent: navigator.userAgent
-            });
-        } catch (error) {
-            console.warn('⚠️ Admin-Log fehlgeschlagen:', error);
-            // Silently fail admin logging - not critical for functionality
-        }
-    }
-
-    // Helper Functions
-    function redirectToLogin() {
-        window.location.href = 'admin-login.html';
-    }
-
-    function showError(message) {
-        console.error('Admin Dashboard Error:', message);
-    }
-
-    function showNotification(message, type = 'info') {
-        // Einfache Notification (kann erweitert werden)
-        console.log(`${type.toUpperCase()}: ${message}`);
-        
-        // Optional: Toast-Notification erstellen
-        const toast = document.createElement('div');
-        toast.className = `admin-toast ${type}`;
-        toast.textContent = message;
-        toast.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: var(--glass-bg);
-            color: var(--text-primary);
-            padding: 1rem 1.5rem;
-            border-radius: 12px;
-            border: 1px solid var(--border-secondary);
-            backdrop-filter: blur(12px);
-            z-index: 9999;
-            animation: slideIn 0.3s ease;
-        `;
-        
-        document.body.appendChild(toast);
-        
-        setTimeout(() => {
-            toast.remove();
-        }, 3000);
     }
 
     // Cleanup beim Verlassen
@@ -1212,6 +910,99 @@
             hiCountListener();
         }
     }
+
+    // Notification System
+    function showNotification(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `notification ${type}`;
+        toast.innerHTML = `
+            <i class="fas ${getNotificationIcon(type)}"></i>
+            <span>${message}</span>
+        `;
+        
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-secondary);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            color: var(--text-primary);
+            box-shadow: var(--shadow-lg);
+            z-index: 9999;
+            animation: slideIn 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            max-width: 400px;
+            font-weight: 600;
+        `;
+        
+        // Type-specific styling
+        switch(type) {
+            case 'success':
+                toast.style.borderColor = 'var(--accent-success)';
+                toast.style.background = 'rgba(0, 255, 136, 0.1)';
+                break;
+            case 'error':
+                toast.style.borderColor = 'var(--accent-secondary)';
+                toast.style.background = 'rgba(255, 0, 128, 0.1)';
+                break;
+            case 'warning':
+                toast.style.borderColor = 'var(--accent-warning)';
+                toast.style.background = 'rgba(255, 170, 0, 0.1)';
+                break;
+        }
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 300);
+        }, 3000);
+    }
+
+    function getNotificationIcon(type) {
+        switch(type) {
+            case 'success': return 'fa-check-circle';
+            case 'error': return 'fa-exclamation-triangle';
+            case 'warning': return 'fa-exclamation-triangle';
+            default: return 'fa-info-circle';
+        }
+    }
+
+    // CSS für Animationen
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
 
     // Initialisierung starten
     initializeAdminFirebase();
