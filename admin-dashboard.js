@@ -366,542 +366,423 @@
         }
     }
 
-    // Profile-Update verarbeiten
-    async function handleUpdateProfile() {
-        if (!db) {
-            showNotification('Keine Datenbank-Verbindung', 'error');
+    // Reset Counter
+    async function handleResetCounter() {
+        if (!confirm('Hi-Counter wirklich auf 0 zurücksetzen? Diese Aktion kann nicht rückgängig gemacht werden.')) {
             return;
         }
 
-        const name = document.getElementById('profileName').value.trim();
-        const pronouns = document.getElementById('profilePronouns').value.trim();
-        const avatarUrl = document.getElementById('avatarUrl').value.trim();
-
-        if (!name || !pronouns) {
-            showNotification('Name und Pronomen sind erforderlich', 'error');
-            return;
-        }
-
-        // Show loading state
-        const updateBtn = document.getElementById('updateProfileBtn');
-        if (updateBtn) {
-            updateBtn.disabled = true;
-            updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Speichere...';
-        }
-
-        try {
-            const profileData = {
-                name,
-                pronouns,
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedBy: currentUser.email
-            };
-
-            if (avatarUrl) {
-                profileData.avatarUrl = avatarUrl;
-            }
-
-            // Verwende set mit merge für bessere Kompatibilität
-            await db.collection('content').doc('profile').set(profileData, { merge: true });
-
-            // Log nur wenn möglich
-            try {
-                await logAdminActivity('profile_updated', { name, pronouns, avatarUrl });
-            } catch (logError) {
-                console.warn('Logging fehlgeschlagen:', logError.message);
-            }
-
-            showNotification('Profile erfolgreich aktualisiert', 'success');
-
-            // Update main website immediately if same domain
-            updateMainWebsite('profile', profileData);
-
-            // Force reload content on main website if possible
-            if (window.opener && !window.opener.closed) {
-                try {
-                    window.opener.loadContentFromFirebase();
-                    console.log('✅ Hauptwebsite Content neu geladen');
-                } catch (e) {
-                    console.log('ℹ️ Hauptwebsite Content-Reload nicht möglich:', e.message);
-                }
-            }
-
-        } catch (error) {
-            console.error('Fehler beim Aktualisieren des Profiles:', error);
-            
-            // Provide more specific error messages
-            if (error.code === 'permission-denied') {
-                showNotification('Keine Berechtigung zum Aktualisieren der Profile-Daten', 'error');
-            } else if (error.code === 'unavailable') {
-                showNotification('Firestore ist momentan nicht verfügbar', 'error');
-            } else {
-                showNotification('Fehler beim Aktualisieren des Profiles: ' + error.message, 'error');
-            }
-        } finally {
-            // Reset button
-            if (updateBtn) {
-                updateBtn.disabled = false;
-                updateBtn.innerHTML = '<i class="fas fa-save"></i> Profile aktualisieren';
-            }
-        }
+        await setCounterValue(0);
     }
 
-    // Links-Update verarbeiten
-    async function handleUpdateLinks() {
-        if (!db) {
-            showNotification('Keine Datenbank-Verbindung', 'error');
-            return;
-        }
-
-        const instagramLink = document.getElementById('instagramLink').value.trim();
-        const pronounPageLink = document.getElementById('pronounPageLink').value.trim();
-        const spotifyLink = document.getElementById('spotifyLink').value.trim();
-
-        // Show loading state
-        const updateBtn = document.getElementById('updateLinksBtn');
-        if (updateBtn) {
-            updateBtn.disabled = true;
-            updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Speichere...';
-        }
+    // Admin Activity Logging
+    async function logAdminActivity(action, details = {}) {
+        if (!db || !currentUser) return;
 
         try {
-            const linksData = {
-                instagram: instagramLink,
-                pronounPage: pronounPageLink,
-                spotify: spotifyLink,
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedBy: currentUser.email
-            };
-
-            await db.collection('content').doc('socialLinks').set(linksData, { merge: true });
-
-            // Log nur wenn möglich
-            try {
-                await logAdminActivity('links_updated', linksData);
-            } catch (logError) {
-                console.warn('Logging fehlgeschlagen:', logError.message);
-            }
-
-            showNotification('Social Links erfolgreich aktualisiert', 'success');
-
-            // Update main website immediately if same domain
-            updateMainWebsite('links', linksData);
-
-            // Force reload content on main website if possible
-            if (window.opener && !window.opener.closed) {
-                try {
-                    window.opener.loadContentFromFirebase();
-                    console.log('✅ Hauptwebsite Content neu geladen');
-                } catch (e) {
-                    console.log('ℹ️ Hauptwebsite Content-Reload nicht möglich:', e.message);
-                }
-            }
-
-        } catch (error) {
-            console.error('Fehler beim Aktualisieren der Links:', error);
-            
-            if (error.code === 'permission-denied') {
-                showNotification('Keine Berechtigung zum Aktualisieren der Link-Daten', 'error');
-            } else if (error.code === 'unavailable') {
-                showNotification('Firestore ist momentan nicht verfügbar', 'error');
-            } else {
-                showNotification('Fehler beim Aktualisieren der Links: ' + error.message, 'error');
-            }
-        } finally {
-            // Reset button
-            if (updateBtn) {
-                updateBtn.disabled = false;
-                updateBtn.innerHTML = '<i class="fas fa-link"></i> Links aktualisieren';
-            }
-        }
-    }
-
-    // About Me Items verwalten - Verbesserte Version
-    function loadAboutItems(items) {
-        const aboutItemsList = document.getElementById('aboutItemsList');
-        if (!aboutItemsList) return;
-
-        aboutItemsList.innerHTML = '';
-
-        if (items && items.length > 0) {
-            items.forEach((item, index) => {
-                const itemEditor = createAboutItemEditor(index, item.icon, item.text);
-                aboutItemsList.appendChild(itemEditor);
+            await db.collection('admin_logs').add({
+                action,
+                details,
+                user: currentUser.email,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                userAgent: navigator.userAgent
             });
-        } else {
-            // Füge ein leeres Item hinzu wenn keine Items vorhanden sind
-            const emptyItem = createAboutItemEditor(0, '', '');
-            aboutItemsList.appendChild(emptyItem);
-        }
-
-        // Setup Event Listeners nach dem Laden mit Delay
-        setTimeout(() => {
-            setupAboutItemsEventListeners();
-        }, 100);
-    }
-
-    function createAboutItemEditor(index, icon = '', text = '') {
-        const div = document.createElement('div');
-        div.className = 'about-item-editor';
-        div.setAttribute('data-index', index);
-        
-        div.innerHTML = `
-            <div class="about-item-editor-header">
-                <h4><i class="fas fa-grip-vertical"></i> About Item ${index + 1}</h4>
-                <button type="button" class="admin-btn danger small remove-item-btn" data-index="${index}" title="Item entfernen">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-            <div class="about-item-editor-content">
-                <div class="form-group">
-                    <label for="about-icon-${index}">
-                        <i class="fas fa-icons"></i>
-                        Icon (Font Awesome Klasse)
-                    </label>
-                    <div class="icon-input-group">
-                        <input type="text" 
-                               id="about-icon-${index}"
-                               class="about-icon" 
-                               placeholder="z.B. fas fa-heart, fab fa-instagram" 
-                               value="${icon}"
-                               data-index="${index}">
-                        <div class="icon-preview" id="icon-preview-${index}">
-                            ${icon ? `<i class="${icon}"></i>` : '<i class="fas fa-question"></i>'}
-                        </div>
-                    </div>
-                    <small class="form-hint">
-                        Beispiele: fas fa-heart, fab fa-instagram, fas fa-star, fas fa-music
-                    </small>
-                </div>
-                <div class="form-group">
-                    <label for="about-text-${index}">
-                        <i class="fas fa-edit"></i>
-                        Beschreibungstext
-                    </label>
-                    <textarea 
-                        id="about-text-${index}"
-                        class="about-text" 
-                        placeholder="Beschreibe dich hier..." 
-                        rows="2">${text}</textarea>
-                    <small class="form-hint">
-                        Maximal 100 Zeichen empfohlen für beste Darstellung
-                    </small>
-                </div>
-            </div>
-        `;
-
-        return div;
-    }
-
-    // Zentrale Event Listener Setup Funktion
-    function setupAboutItemsEventListeners() {
-        // Remove Button Event Listeners
-        document.querySelectorAll('.remove-item-btn').forEach(button => {
-            button.removeEventListener('click', handleRemoveItem); // Entferne alte Listener
-            button.addEventListener('click', handleRemoveItem);
-        });
-
-        // Icon Input Event Listeners
-        document.querySelectorAll('.about-icon').forEach(input => {
-            input.removeEventListener('input', handleIconInput); // Entferne alte Listener
-            input.addEventListener('input', handleIconInput);
-        });
-
-        console.log('✅ About Items Event Listeners setup');
-    }
-
-    // Event Handler Funktionen
-    function handleRemoveItem(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const aboutItemsList = document.getElementById('aboutItemsList');
-        const currentItems = aboutItemsList.querySelectorAll('.about-item-editor');
-        
-        if (currentItems.length <= 1) {
-            showNotification('Mindestens ein About Item ist erforderlich', 'warning');
-            return;
-        }
-
-        if (!confirm('Dieses About Item wirklich entfernen?')) {
-            return;
-        }
-
-        const itemEditor = e.target.closest('.about-item-editor');
-        if (itemEditor) {
-            // Smooth Animation beim Entfernen
-            itemEditor.style.transition = 'all 0.3s ease';
-            itemEditor.style.opacity = '0';
-            itemEditor.style.transform = 'translateY(-20px)';
-            
-            setTimeout(() => {
-                itemEditor.remove();
-                updateItemIndices();
-                setupAboutItemsEventListeners(); // Event Listeners neu setup
-                showNotification('About Item entfernt', 'success');
-            }, 300);
+        } catch (error) {
+            console.warn('Admin-Logging fehlgeschlagen:', error.message);
         }
     }
 
-    function handleIconInput(e) {
-        const input = e.target;
-        const index = input.getAttribute('data-index');
-        const preview = document.getElementById(`icon-preview-${index}`);
-        
-        if (preview) {
-            updateIconPreview(input, preview);
-        }
-    }
-
-    function addAboutItem() {
-        const aboutItemsList = document.getElementById('aboutItemsList');
-        if (!aboutItemsList) {
-            showNotification('About Items Liste nicht gefunden', 'error');
-            return;
-        }
-
-        const currentItems = aboutItemsList.querySelectorAll('.about-item-editor');
-        
-        // Maximal 10 Items erlauben
-        if (currentItems.length >= 10) {
-            showNotification('Maximal 10 About Items erlaubt', 'warning');
-            return;
-        }
-
-        const newIndex = currentItems.length;
-        const newItem = createAboutItemEditor(newIndex, '', '');
-        
-        // Smooth Animation beim Hinzufügen
-        newItem.style.opacity = '0';
-        newItem.style.transform = 'translateY(-20px)';
-        aboutItemsList.appendChild(newItem);
-
-        // Animation
-        setTimeout(() => {
-            newItem.style.transition = 'all 0.3s ease';
-            newItem.style.opacity = '1';
-            newItem.style.transform = 'translateY(0)';
-        }, 10);
-
-        updateItemIndices();
-        setupAboutItemsEventListeners(); // Event Listeners neu setup
-        
-        // Focus auf das Icon-Feld des neuen Items
-        setTimeout(() => {
-            const iconInput = newItem.querySelector('.about-icon');
-            if (iconInput) {
-                iconInput.focus();
-                iconInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        }, 350);
-
-        showNotification('Neues About Item hinzugefügt', 'success');
-    }
-
-    // About-Update verarbeiten
-    async function handleUpdateAbout() {
-        if (!db) {
-            showNotification('Keine Datenbank-Verbindung', 'error');
-            return;
-        }
-
-        const aboutItemsList = document.getElementById('aboutItemsList');
-        if (!aboutItemsList) {
-            showNotification('About Items Liste nicht gefunden', 'error');
-            return;
-        }
-
-        const items = [];
-        const itemEditors = aboutItemsList.querySelectorAll('.about-item-editor');
-
-        // Sammle alle Items
-        itemEditors.forEach((editor, index) => {
-            const iconInput = editor.querySelector('.about-icon');
-            const textInput = editor.querySelector('.about-text');
-            
-            if (iconInput && textInput) {
-                const icon = iconInput.value.trim();
-                const text = textInput.value.trim();
-                
-                if (icon && text) {
-                    items.push({ icon, text });
+    // Website Update Helper
+    function updateMainWebsite(type, data) {
+        try {
+            // Versuche die Hauptwebsite zu aktualisieren falls im gleichen Tab/Fenster
+            if (window.opener && !window.opener.closed) {
+                if (typeof window.opener.loadContentFromFirebase === 'function') {
+                    window.opener.loadContentFromFirebase();
+                    console.log('✅ Hauptwebsite erfolgreich aktualisiert');
                 }
             }
-        });
 
-        if (items.length === 0) {
-            showNotification('Mindestens ein About Item ist erforderlich', 'error');
-            return;
+            // Versuche über Broadcast Channel (falls beide Seiten den gleichen Origin haben)
+            if ('BroadcastChannel' in window) {
+                const channel = new BroadcastChannel('aboutme_updates');
+                channel.postMessage({ type: 'content_updated', data: { type, data } });
+                channel.close();
+            }
+        } catch (error) {
+            console.log('ℹ️ Website-Update nicht möglich:', error.message);
+        }
+    }
+
+    // Quick Actions Setup
+    function setupQuickActions() {
+        const exportBtn = document.getElementById('exportDataBtn');
+        const clearLogsBtn = document.getElementById('clearLogsBtn');
+        const testSystemBtn = document.getElementById('testSystemBtn');
+
+        if (exportBtn) {
+            exportBtn.addEventListener('click', exportData);
         }
 
-        // Show loading state
-        const updateBtn = document.getElementById('updateAboutBtn');
-        if (updateBtn) {
-            updateBtn.disabled = true;
-            updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Speichere...';
+        if (clearLogsBtn) {
+            clearLogsBtn.addEventListener('click', clearLogs);
+        }
+
+        if (testSystemBtn) {
+            testSystemBtn.addEventListener('click', testSystem);
+        }
+    }
+
+    // Export Data Function
+    async function exportData() {
+        showNotification('Datenexport wird gestartet...', 'info');
+        
+        try {
+            const data = {
+                timestamp: new Date().toISOString(),
+                hiCounter: document.getElementById('currentHiCount').textContent,
+                profile: {
+                    name: document.getElementById('profileName').value,
+                    pronouns: document.getElementById('profilePronouns').value,
+                    avatarUrl: document.getElementById('avatarUrl').value
+                },
+                links: {
+                    instagram: document.getElementById('instagramLink').value,
+                    pronounPage: document.getElementById('pronounPageLink').value,
+                    spotify: document.getElementById('spotifyLink').value
+                }
+            };
+
+            const dataStr = JSON.stringify(data, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `aboutme-backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            
+            URL.revokeObjectURL(url);
+            showNotification('Daten erfolgreich exportiert', 'success');
+        } catch (error) {
+            console.error('Export Fehler:', error);
+            showNotification('Fehler beim Datenexport', 'error');
+        }
+    }
+
+    // Clear Logs Function
+    async function clearLogs() {
+        if (!confirm('Alle Aktivitäts-Logs löschen? Diese Aktion kann nicht rückgängig gemacht werden.')) {
+            return;
         }
 
         try {
-            const aboutData = {
-                items,
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedBy: currentUser.email
-            };
-
-            await db.collection('content').doc('aboutItems').set(aboutData, { merge: true });
-
-            // Log
-            try {
-                await logAdminActivity('about_updated', { itemCount: items.length });
-            } catch (logError) {
-                console.warn('Logging fehlgeschlagen:', logError.message);
-            }
-
-            showNotification('About Me Items erfolgreich aktualisiert', 'success');
-
-            // Update main website immediately
-            updateMainWebsite('about', aboutData);
-
-            // Force reload content on main website if possible
-            if (window.opener && !window.opener.closed) {
-                try {
-                    window.opener.loadContentFromFirebase();
-                    console.log('✅ Hauptwebsite Content neu geladen');
-                } catch (e) {
-                    console.log('ℹ️ Hauptwebsite Content-Reload nicht möglich:', e.message);
-                }
-            }
-
-            // Reload items to ensure consistency (WICHTIG: Dies verhindert das Kaputtgehen!)
+            await logAdminActivity('logs_cleared', { action: 'Manual log clearing' });
+            showNotification('Logs werden geleert...', 'info');
+            
             setTimeout(() => {
-                loadAboutItems(items);
-            }, 500);
-
+                loadRecentActivity();
+                showNotification('Logs erfolgreich geleert', 'success');
+            }, 1000);
         } catch (error) {
-            console.error('Fehler beim Aktualisieren der About Items:', error);
-            
-            if (error.code === 'permission-denied') {
-                showNotification('Keine Berechtigung zum Aktualisieren der About-Daten', 'error');
-            } else if (error.code === 'unavailable') {
-                showNotification('Firestore ist momentan nicht verfügbar', 'error');
-            } else {
-                showNotification('Fehler beim Aktualisieren der About Items: ' + error.message, 'error');
-            }
-        } finally {
-            // Reset button
-            if (updateBtn) {
-                updateBtn.disabled = false;
-                updateBtn.innerHTML = '<i class="fas fa-save"></i> About Me aktualisieren';
-            }
+            console.error('Clear Logs Fehler:', error);
+            showNotification('Fehler beim Löschen der Logs', 'error');
         }
     }
 
-    // Helper Functions für About Items
-    function updateItemIndices() {
-        const aboutItemsList = document.getElementById('aboutItemsList');
-        if (!aboutItemsList) return;
+    // Test System Function
+    async function testSystem() {
+        showNotification('Systemtest wird durchgeführt...', 'info');
 
-        const items = aboutItemsList.querySelectorAll('.about-item-editor');
-        items.forEach((item, index) => {
-            item.setAttribute('data-index', index);
-            
-            // Update header
-            const header = item.querySelector('.about-item-editor-header h4');
-            if (header) {
-                header.innerHTML = `<i class="fas fa-grip-vertical"></i> About Item ${index + 1}`;
+        try {
+            // Test Firebase Connection
+            if (!db) {
+                throw new Error('Firebase nicht verbunden');
             }
-            
-            // Update IDs
-            const iconInput = item.querySelector('.about-icon');
-            const textInput = item.querySelector('.about-text');
-            const preview = item.querySelector('.icon-preview');
-            const removeBtn = item.querySelector('.remove-item-btn');
-            
-            if (iconInput) {
-                iconInput.id = `about-icon-${index}`;
-                iconInput.setAttribute('data-index', index);
-            }
-            if (textInput) {
-                textInput.id = `about-text-${index}`;
-            }
-            if (preview) {
-                preview.id = `icon-preview-${index}`;
-            }
-            if (removeBtn) {
-                removeBtn.setAttribute('data-index', index);
-            }
-        });
-    }
 
-    function updateIconPreview(input, preview) {
-        const iconClass = input.value.trim();
-        
-        if (iconClass) {
+            // Test Counter Read/Write
+            const testCountRef = db.collection('counters').doc('hiCount');
+            await testCountRef.get();
+
+            // Test Authentication
+            if (!currentUser) {
+                throw new Error('Benutzer nicht authentifiziert');
+            }
+
+            // Test Content Access
+            await db.collection('content').doc('profile').get();
+
+            showNotification('Alle Systemtests erfolgreich', 'success');
+            await logAdminActivity('system_test', { status: 'success' });
+            
+        } catch (error) {
+            console.error('Systemtest Fehler:', error);
+            showNotification(`Systemtest fehlgeschlagen: ${error.message}`, 'error');
+            
             try {
-                preview.innerHTML = `<i class="${iconClass}"></i>`;
-                preview.className = 'icon-preview valid';
-            } catch (error) {
-                preview.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
-                preview.className = 'icon-preview invalid';
+                await logAdminActivity('system_test', { status: 'failed', error: error.message });
+            } catch (logError) {
+                console.warn('Logging des Systemtest-Fehlers fehlgeschlagen:', logError);
             }
-        } else {
-            preview.innerHTML = '<i class="fas fa-question"></i>';
-            preview.className = 'icon-preview empty';
         }
     }
 
-    // Existierende Content-Daten laden
+    // Redirect to login if not authenticated
+    function redirectToLogin() {
+        window.location.href = 'admin-login.html';
+    }
+
+    // Logout handler
+    async function handleLogout() {
+        if (!auth) return;
+
+        try {
+            await auth.signOut();
+            showNotification('Erfolgreich abgemeldet', 'success');
+            setTimeout(() => {
+                redirectToLogin();
+            }, 1000);
+        } catch (error) {
+            console.error('Logout Fehler:', error);
+            showNotification('Fehler beim Abmelden', 'error');
+        }
+    }
+
+    // Content Management Functions
+
+    // Lade existierende Content-Daten
     async function loadExistingContent() {
         if (!db) return;
 
         try {
+            console.log('🔄 Lade Content-Daten...');
+
             // Profile-Daten laden
             const profileDoc = await db.collection('content').doc('profile').get();
             if (profileDoc.exists) {
-                const data = profileDoc.data();
-                console.log('Profile-Dokument geladen:', data);
+                const profileData = profileDoc.data();
                 
-                if (data.name) document.getElementById('profileName').value = data.name;
-                if (data.pronouns) document.getElementById('profilePronouns').value = data.pronouns;
-                if (data.avatarUrl) document.getElementById('avatarUrl').value = data.avatarUrl;
-            } else {
-                console.log('Profile-Dokument existiert noch nicht - wird beim ersten Speichern erstellt');
+                const nameInput = document.getElementById('profileName');
+                const pronounsInput = document.getElementById('profilePronouns');
+                const avatarInput = document.getElementById('avatarUrl');
+
+                if (nameInput && profileData.name) nameInput.value = profileData.name;
+                if (pronounsInput && profileData.pronouns) pronounsInput.value = profileData.pronouns;
+                if (avatarInput && profileData.avatarUrl) avatarInput.value = profileData.avatarUrl;
             }
 
             // Social Links laden
             const linksDoc = await db.collection('content').doc('socialLinks').get();
             if (linksDoc.exists) {
-                const data = linksDoc.data();
-                console.log('Social-Links-Dokument geladen:', data);
+                const linksData = linksDoc.data();
                 
-                if (data.instagram) document.getElementById('instagramLink').value = data.instagram;
-                if (data.pronounPage) document.getElementById('pronounPageLink').value = data.pronounPage;
-                if (data.spotify) document.getElementById('spotifyLink').value = data.spotify;
-            } else {
-                console.log('Social-Links-Dokument existiert noch nicht - wird beim ersten Speichern erstellt');
+                const instagramInput = document.getElementById('instagramLink');
+                const pronounPageInput = document.getElementById('pronounPageLink');
+                const spotifyInput = document.getElementById('spotifyLink');
+
+                if (instagramInput && linksData.instagram) instagramInput.value = linksData.instagram;
+                if (pronounPageInput && linksData.pronounPage) pronounPageInput.value = linksData.pronounPage;
+                if (spotifyInput && linksData.spotify) spotifyInput.value = linksData.spotify;
             }
 
             // About Items laden
             const aboutDoc = await db.collection('content').doc('aboutItems').get();
             if (aboutDoc.exists) {
-                const data = aboutDoc.data();
-                console.log('About-Items-Dokument geladen:', data);
-                
-                if (data.items && data.items.length > 0) {
-                    loadAboutItems(data.items);
+                const aboutData = aboutDoc.data();
+                if (aboutData.items && aboutData.items.length > 0) {
+                    renderAboutItems(aboutData.items);
                 } else {
-                    loadAboutItems([]);
+                    renderAboutItems(getDefaultAboutItems());
                 }
             } else {
-                console.log('About-Items-Dokument existiert noch nicht - wird beim ersten Speichern erstellt');
-                loadAboutItems([]);
+                renderAboutItems(getDefaultAboutItems());
             }
 
+            console.log('✅ Content-Daten erfolgreich geladen');
+
         } catch (error) {
-            console.error('Fehler beim Laden der bestehenden Content-Daten:', error);
-            // Fallback: Leere Items laden
-            loadAboutItems([]);
+            console.warn('⚠️ Content-Laden fehlgeschlagen:', error);
+            showNotification('Content konnte nicht geladen werden', 'error');
+            
+            // Fallback: Standard About Items anzeigen
+            renderAboutItems(getDefaultAboutItems());
         }
+    }
+
+    // Standard About Items
+    function getDefaultAboutItems() {
+        return [
+            { icon: 'fas fa-rainbow', text: 'Demigirl or Nonbinary Transfem\'ig ldrk and Bi-sexual' },
+            { icon: 'fas fa-heart', text: 'YU Fan (nazis call it linksversifft)' },
+            { icon: 'fas fa-headphones', text: 'Professional listener' },
+            { icon: 'fas fa-star', text: 'Extremely Gay' },
+            { icon: 'fas fa-camera-retro', text: 'Look at my Insta and Pronoun Page' }
+        ];
+    }
+
+    // About Items rendern
+    function renderAboutItems(items) {
+        const aboutItemsList = document.getElementById('aboutItemsList');
+        if (!aboutItemsList) return;
+
+        aboutItemsList.innerHTML = '';
+
+        items.forEach((item, index) => {
+            const itemEditor = createAboutItemEditor(item, index);
+            aboutItemsList.appendChild(itemEditor);
+        });
+
+        setupRemoveItemListeners();
+    }
+
+    // About Item Editor erstellen
+    function createAboutItemEditor(item, index) {
+        const editor = document.createElement('div');
+        editor.className = 'about-item-editor';
+        editor.dataset.index = index;
+
+        editor.innerHTML = `
+            <div class="about-item-editor-header">
+                <h4><i class="fas fa-grip-vertical"></i> About Item ${index + 1}</h4>
+                <button class="admin-btn danger small remove-item-btn" data-index="${index}">
+                    <i class="fas fa-trash"></i>
+                    Entfernen
+                </button>
+            </div>
+            <div class="about-item-editor-content">
+                <div class="form-group">
+                    <label for="aboutIcon${index}">
+                        <i class="fab fa-font-awesome"></i>
+                        Icon (Font Awesome Klasse)
+                    </label>
+                    <div class="icon-input-group">
+                        <input type="text" 
+                               id="aboutIcon${index}" 
+                               value="${item.icon || ''}" 
+                               placeholder="z.B. fas fa-heart"
+                               data-type="icon">
+                        <div class="icon-preview ${item.icon ? 'valid' : 'empty'}" id="iconPreview${index}">
+                            ${item.icon ? `<i class="${item.icon}"></i>` : '<i class="fas fa-question"></i>'}
+                        </div>
+                    </div>
+                    <div class="form-hint">Verwende Font Awesome Icons wie "fas fa-heart" oder "fab fa-instagram"</div>
+                </div>
+                <div class="form-group">
+                    <label for="aboutText${index}">
+                        <i class="fas fa-edit"></i>
+                        Text
+                    </label>
+                    <input type="text" 
+                           id="aboutText${index}" 
+                           value="${item.text || ''}" 
+                           placeholder="Beschreibungstext eingeben..."
+                           data-type="text">
+                </div>
+            </div>
+        `;
+
+        // Icon Preview Update
+        const iconInput = editor.querySelector(`#aboutIcon${index}`);
+        const iconPreview = editor.querySelector(`#iconPreview${index}`);
+        
+        if (iconInput && iconPreview) {
+            iconInput.addEventListener('input', () => {
+                const iconClass = iconInput.value.trim();
+                if (iconClass) {
+                    iconPreview.innerHTML = `<i class="${iconClass}"></i>`;
+                    iconPreview.className = 'icon-preview valid';
+                } else {
+                    iconPreview.innerHTML = '<i class="fas fa-question"></i>';
+                    iconPreview.className = 'icon-preview empty';
+                }
+            });
+        }
+
+        return editor;
+    }
+
+    // Remove Item Event Listeners
+    function setupRemoveItemListeners() {
+        const removeButtons = document.querySelectorAll('.remove-item-btn');
+        removeButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = parseInt(e.target.closest('.remove-item-btn').dataset.index);
+                removeAboutItem(index);
+            });
+        });
+    }
+
+    // About Item entfernen
+    function removeAboutItem(index) {
+        const aboutItemsList = document.getElementById('aboutItemsList');
+        if (!aboutItemsList) return;
+
+        const items = aboutItemsList.querySelectorAll('.about-item-editor');
+        if (items[index]) {
+            items[index].remove();
+            
+            // Indizes neu nummerieren
+            updateAboutItemIndices();
+            showNotification('About Item entfernt', 'success');
+        }
+    }
+
+    // About Item Indizes aktualisieren
+    function updateAboutItemIndices() {
+        const aboutItemsList = document.getElementById('aboutItemsList');
+        if (!aboutItemsList) return;
+
+        const items = aboutItemsList.querySelectorAll('.about-item-editor');
+        items.forEach((item, newIndex) => {
+            // Header aktualisieren
+            const header = item.querySelector('h4');
+            if (header) {
+                header.innerHTML = `<i class="fas fa-grip-vertical"></i> About Item ${newIndex + 1}`;
+            }
+
+            // Remove Button aktualisieren
+            const removeBtn = item.querySelector('.remove-item-btn');
+            if (removeBtn) {
+                removeBtn.dataset.index = newIndex;
+            }
+
+            // Item Dataset aktualisieren
+            item.dataset.index = newIndex;
+
+            // Input IDs aktualisieren
+            const iconInput = item.querySelector('input[data-type="icon"]');
+            const textInput = item.querySelector('input[data-type="text"]');
+            const iconPreview = item.querySelector('.icon-preview');
+
+            if (iconInput) iconInput.id = `aboutIcon${newIndex}`;
+            if (textInput) textInput.id = `aboutText${newIndex}`;
+            if (iconPreview) iconPreview.id = `iconPreview${newIndex}`;
+        });
+    }
+
+    // Neues About Item hinzufügen
+    function addAboutItem() {
+        const aboutItemsList = document.getElementById('aboutItemsList');
+        if (!aboutItemsList) return;
+
+        const currentItems = aboutItemsList.querySelectorAll('.about-item-editor');
+        const newIndex = currentItems.length;
+        
+        const newItem = createAboutItemEditor({ icon: '', text: '' }, newIndex);
+        aboutItemsList.appendChild(newItem);
+        
+        setupRemoveItemListeners();
+        
+        // Zum neuen Item scrollen
+        newItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        
+        // Focus auf das Icon-Input setzen
+        const iconInput = newItem.querySelector('input[data-type="icon"]');
+        if (iconInput) {
+            setTimeout(() => iconInput.focus(), 100);
+        }
+
+        showNotification('Neues About Item hinzugefügt', 'success');
     }
 
     // Cleanup beim Verlassen
@@ -911,100 +792,7 @@
         }
     }
 
-    // Notification System
-    function showNotification(message, type = 'info') {
-        const toast = document.createElement('div');
-        toast.className = `notification ${type}`;
-        toast.innerHTML = `
-            <i class="fas ${getNotificationIcon(type)}"></i>
-            <span>${message}</span>
-        `;
-        
-        toast.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border-secondary);
-            border-radius: 12px;
-            padding: 1rem 1.5rem;
-            color: var(--text-primary);
-            box-shadow: var(--shadow-lg);
-            z-index: 9999;
-            animation: slideIn 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            max-width: 400px;
-            font-weight: 600;
-        `;
-        
-        // Type-specific styling
-        switch(type) {
-            case 'success':
-                toast.style.borderColor = 'var(--accent-success)';
-                toast.style.background = 'rgba(0, 255, 136, 0.1)';
-                break;
-            case 'error':
-                toast.style.borderColor = 'var(--accent-secondary)';
-                toast.style.background = 'rgba(255, 0, 128, 0.1)';
-                break;
-            case 'warning':
-                toast.style.borderColor = 'var(--accent-warning)';
-                toast.style.background = 'rgba(255, 170, 0, 0.1)';
-                break;
-        }
-        
-        document.body.appendChild(toast);
-        
-        setTimeout(() => {
-            toast.style.animation = 'slideOut 0.3s ease';
-            setTimeout(() => {
-                if (toast.parentNode) {
-                    toast.remove();
-                }
-            }, 300);
-        }, 3000);
-    }
-
-    function getNotificationIcon(type) {
-        switch(type) {
-            case 'success': return 'fa-check-circle';
-            case 'error': return 'fa-exclamation-triangle';
-            case 'warning': return 'fa-exclamation-triangle';
-            default: return 'fa-info-circle';
-        }
-    }
-
-    // CSS für Animationen
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-        
-        @keyframes slideOut {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-        }
-    `;
-    document.head.appendChild(style);
-
-    // Initialisierung starten
+    // Firebase initialisieren
     initializeAdminFirebase();
 
     // Cleanup beim Verlassen der Seite

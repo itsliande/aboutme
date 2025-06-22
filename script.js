@@ -314,6 +314,16 @@
         }
     };
 
+    // Handle Website Update Broadcast (für Live-Updates zwischen Tabs)
+    if ('BroadcastChannel' in window) {
+        const updateChannel = new BroadcastChannel('aboutme_updates');
+        updateChannel.addEventListener('message', (event) => {
+            if (event.data.type === 'content_updated') {
+                loadContentFromFirebase();
+            }
+        });
+    }
+
     // Cleanup beim Verlassen
     function cleanup() {
         if (hiCountListener) {
