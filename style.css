@@ -444,42 +444,12 @@ body::before {
     letter-spacing: 0.02em;
 }
 
-.social-btn::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    transition: all 0.3s ease;
-    border-radius: 20px;
-}
-
 .social-btn:hover {
     transform: translateY(-6px) scale(1.02);
     border-color: var(--accent-primary);
     box-shadow: 
         0 16px 40px rgba(0, 0, 0, 0.3),
         0 0 40px var(--glow-cyan);
-}
-
-.social-btn.instagram::before {
-    background: linear-gradient(135deg, #e1306c, #f56040, #f77737, #fcaf45, #ffdc80);
-}
-
-.social-btn.pronoun::before {
-    background: linear-gradient(135deg, var(--accent-secondary), var(--accent-purple));
-}
-
-.social-btn.spotify::before {
-    background: linear-gradient(135deg, #1db954, #1ed760);
-}
-
-.social-btn:hover::before {
-    opacity: 0.1;
-}
-
-.social-btn > * {
-    position: relative;
-    z-index: 1;
 }
 
 .social-btn i {
@@ -890,7 +860,7 @@ body::before {
     justify-content: center;
     gap: 0.75rem;
     padding: 1rem 1.5rem;
-    border: none;
+    border: 1px solid var(--border-secondary);
     border-radius: 16px;
     font-family: inherit;
     font-weight: 700;
@@ -903,29 +873,15 @@ body::before {
     position: relative;
     overflow: hidden;
     backdrop-filter: blur(12px);
-    box-shadow: 
-        0 8px 32px rgba(0, 0, 0, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
     min-height: 48px;
-}
-
-.btn::before, .admin-btn::before, .say-hi-btn::before, 
-.login-btn::before, .admin-login-btn::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    transition: all 0.3s ease;
-    border-radius: inherit;
 }
 
 .btn:hover, .admin-btn:hover, .say-hi-btn:hover:not(:disabled), 
 .login-btn:hover:not(:disabled), .admin-login-btn:hover:not(:disabled) {
-    transform: translateY(-3px);
-    box-shadow: 
-        0 16px 48px rgba(0, 0, 0, 0.4),
-        0 0 60px rgba(0, 212, 255, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    border-color: var(--accent-primary);
 }
 
 .btn:active, .admin-btn:active, .say-hi-btn:active:not(:disabled), 
@@ -947,28 +903,16 @@ body::before {
     border: 1px solid var(--accent-primary);
 }
 
-.btn.primary::before, .admin-btn.primary::before {
-    background: var(--accent-secondary);
-}
-
 .btn.secondary, .admin-btn.secondary {
     background: rgba(255, 255, 255, 0.05);
     color: var(--text-secondary);
     border: 1px solid var(--border-secondary);
 }
 
-.btn.secondary::before, .admin-btn.secondary::before {
-    background: rgba(255, 255, 255, 0.1);
-}
-
 .btn.danger, .admin-btn.danger {
     background: var(--accent-secondary);
     color: white;
     border: 1px solid var(--accent-secondary);
-}
-
-.btn.danger::before, .admin-btn.danger::before {
-    background: #ff4757;
 }
 
 .btn.success, .admin-btn.success {
@@ -1006,10 +950,6 @@ body::before {
     margin-bottom: 2rem;
 }
 
-.say-hi-btn::before {
-    background: var(--accent-secondary);
-}
-
 .say-hi-btn.disabled {
     background: #3a3a4a;
     border-color: #3a3a4a;
@@ -1021,10 +961,6 @@ body::before {
     background: var(--accent-primary);
     color: white;
     border: 1px solid var(--accent-primary);
-}
-
-.login-btn::before, .admin-login-btn::before {
-    background: var(--accent-secondary);
 }
 
 /* Social Buttons */
@@ -1045,22 +981,6 @@ body::before {
     box-shadow: 
         0 16px 40px rgba(0, 0, 0, 0.3),
         0 0 40px var(--glow-cyan);
-}
-
-.social-btn.instagram::before {
-    background: linear-gradient(135deg, #e1306c, #f56040, #f77737, #fcaf45, #ffdc80);
-}
-
-.social-btn.pronoun::before {
-    background: linear-gradient(135deg, var(--accent-secondary), var(--accent-purple));
-}
-
-.social-btn.spotify::before {
-    background: linear-gradient(135deg, #1db954, #1ed760);
-}
-
-.social-btn:hover::before {
-    opacity: 0.1;
 }
 
 /* Button Sizes */

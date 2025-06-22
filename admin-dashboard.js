@@ -195,15 +195,25 @@
                 .catch((error) => {
                     console.error('Fehler beim Laden der Aktivitäten:', error);
                     activityListEl.innerHTML = `
-                        <div class="activity-item error">
+                        <div class="activity-item">
                             <i class="fas fa-exclamation-triangle"></i>
-                            <span>Fehler beim Laden der Aktivitäten</span>
+                            <span>Keine Berechtigung für Aktivitäten-Log</span>
+                            <small>Admin-Rechte erforderlich</small>
                         </div>
                     `;
                 });
 
         } catch (error) {
             console.error('Fehler beim Setup der Aktivitäten:', error);
+            if (activityListEl) {
+                activityListEl.innerHTML = `
+                    <div class="activity-item">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Aktivitäten-Log nicht verfügbar</span>
+                        <small>Berechtigungen prüfen</small>
+                    </div>
+                `;
+            }
         }
     }
 
@@ -344,6 +354,13 @@
             return;
         }
 
+        // Show loading state
+        const updateBtn = document.getElementById('updateProfileBtn');
+        if (updateBtn) {
+            updateBtn.disabled = true;
+            updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Speichere...';
+        }
+
         try {
             const profileData = {
                 name,
@@ -356,6 +373,7 @@
                 profileData.avatarUrl = avatarUrl;
             }
 
+            // Try to create/update the document with merge
             await db.collection('content').doc('profile').set(profileData, { merge: true });
 
             await logAdminActivity('profile_updated', { name, pronouns, avatarUrl });
@@ -367,7 +385,21 @@
 
         } catch (error) {
             console.error('Fehler beim Aktualisieren des Profiles:', error);
-            showNotification('Fehler beim Aktualisieren des Profiles', 'error');
+            
+            // Provide more specific error messages
+            if (error.code === 'permission-denied') {
+                showNotification('Keine Berechtigung zum Aktualisieren der Profile-Daten', 'error');
+            } else if (error.code === 'unavailable') {
+                showNotification('Firestore ist momentan nicht verfügbar', 'error');
+            } else {
+                showNotification('Fehler beim Aktualisieren des Profiles: ' + error.message, 'error');
+            }
+        } finally {
+            // Reset button
+            if (updateBtn) {
+                updateBtn.disabled = false;
+                updateBtn.innerHTML = '<i class="fas fa-save"></i> Profile aktualisieren';
+            }
         }
     }
 
@@ -381,6 +413,13 @@
         const instagramLink = document.getElementById('instagramLink').value.trim();
         const pronounPageLink = document.getElementById('pronounPageLink').value.trim();
         const spotifyLink = document.getElementById('spotifyLink').value.trim();
+
+        // Show loading state
+        const updateBtn = document.getElementById('updateLinksBtn');
+        if (updateBtn) {
+            updateBtn.disabled = true;
+            updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Speichere...';
+        }
 
         try {
             const linksData = {
@@ -402,7 +441,20 @@
 
         } catch (error) {
             console.error('Fehler beim Aktualisieren der Links:', error);
-            showNotification('Fehler beim Aktualisieren der Links', 'error');
+            
+            if (error.code === 'permission-denied') {
+                showNotification('Keine Berechtigung zum Aktualisieren der Link-Daten', 'error');
+            } else if (error.code === 'unavailable') {
+                showNotification('Firestore ist momentan nicht verfügbar', 'error');
+            } else {
+                showNotification('Fehler beim Aktualisieren der Links: ' + error.message, 'error');
+            }
+        } finally {
+            // Reset button
+            if (updateBtn) {
+                updateBtn.disabled = false;
+                updateBtn.innerHTML = '<i class="fas fa-link"></i> Links aktualisieren';
+            }
         }
     }
 
@@ -446,35 +498,110 @@
         if (!db) return;
 
         try {
-            // Load profile data
-            const profileDoc = await db.collection('content').doc('profile').get();
-            if (profileDoc.exists) {
-                const data = profileDoc.data();
+            // Versuche zuerst Profile-Daten zu laden
+            try {
+                const profileDoc = await db.collection('content').doc('profile').get();
+                if (profileDoc.exists) {
+                    const data = profileDoc.data();
+                    const nameInput = document.getElementById('profileName');
+                    const pronounsInput = document.getElementById('profilePronouns');
+                    const avatarInput = document.getElementById('avatarUrl');
+                    
+                    if (nameInput && data.name) nameInput.value = data.name;
+                    if (pronounsInput && data.pronouns) pronounsInput.value = data.pronouns;
+                    if (avatarInput && data.avatarUrl) avatarInput.value = data.avatarUrl;
+                } else {
+                    console.log('Profile-Dokument existiert noch nicht - wird beim ersten Speichern erstellt');
+                }
+            } catch (profileError) {
+                console.warn('Profile-Daten konnten nicht geladen werden:', profileError.message);
+                // Setze Standardwerte
                 const nameInput = document.getElementById('profileName');
                 const pronounsInput = document.getElementById('profilePronouns');
                 const avatarInput = document.getElementById('avatarUrl');
                 
-                if (nameInput && data.name) nameInput.value = data.name;
-                if (pronounsInput && data.pronouns) pronounsInput.value = data.pronouns;
-                if (avatarInput && data.avatarUrl) avatarInput.value = data.avatarUrl;
+                if (nameInput && !nameInput.value) nameInput.placeholder = 'Name eingeben...';
+                if (pronounsInput && !pronounsInput.value) pronounsInput.placeholder = 'Pronomen eingeben...';
+                if (avatarInput && !avatarInput.value) avatarInput.placeholder = 'Avatar URL eingeben...';
             }
 
-            // Load links data
-            const linksDoc = await db.collection('content').doc('socialLinks').get();
-            if (linksDoc.exists) {
-                const data = linksDoc.data();
+            // Versuche dann Links-Daten zu laden
+            try {
+                const linksDoc = await db.collection('content').doc('socialLinks').get();
+                if (linksDoc.exists) {
+                    const data = linksDoc.data();
+                    const instagramInput = document.getElementById('instagramLink');
+                    const pronounPageInput = document.getElementById('pronounPageLink');
+                    const spotifyInput = document.getElementById('spotifyLink');
+                    
+                    if (instagramInput && data.instagram) instagramInput.value = data.instagram;
+                    if (pronounPageInput && data.pronounPage) pronounPageInput.value = data.pronounPage;
+                    if (spotifyInput && data.spotify) spotifyInput.value = data.spotify;
+                } else {
+                    console.log('Social-Links-Dokument existiert noch nicht - wird beim ersten Speichern erstellt');
+                }
+            } catch (linksError) {
+                console.warn('Social-Links-Daten konnten nicht geladen werden:', linksError.message);
+                // Setze Standardwerte
                 const instagramInput = document.getElementById('instagramLink');
                 const pronounPageInput = document.getElementById('pronounPageLink');
                 const spotifyInput = document.getElementById('spotifyLink');
                 
-                if (instagramInput && data.instagram) instagramInput.value = data.instagram;
-                if (pronounPageInput && data.pronounPage) pronounPageInput.value = data.pronounPage;
-                if (spotifyInput && data.spotify) spotifyInput.value = data.spotify;
+                if (instagramInput && !instagramInput.value) instagramInput.placeholder = 'Instagram URL eingeben...';
+                if (pronounPageInput && !pronounPageInput.value) pronounPageInput.placeholder = 'Pronoun Page URL eingeben...';
+                if (spotifyInput && !spotifyInput.value) spotifyInput.placeholder = 'Spotify URL eingeben...';
             }
 
         } catch (error) {
-            console.error('Fehler beim Laden der Content-Daten:', error);
-            showNotification('Fehler beim Laden der Content-Daten', 'error');
+            console.error('Allgemeiner Fehler beim Laden der Content-Daten:', error);
+            showNotification('Content-Daten konnten nicht geladen werden', 'warning');
+            // Setze Fallback-Werte
+            setFallbackContentValues();
+        }
+    }
+
+    // Fallback-Werte setzen wenn Firebase nicht verfügbar ist
+    function setFallbackContentValues() {
+        try {
+            // Profile Fallback-Werte
+            const nameInput = document.getElementById('profileName');
+            const pronounsInput = document.getElementById('profilePronouns');
+            const avatarInput = document.getElementById('avatarUrl');
+            
+            if (nameInput && !nameInput.value) {
+                nameInput.placeholder = 'Name eingeben...';
+                nameInput.value = '';
+            }
+            if (pronounsInput && !pronounsInput.value) {
+                pronounsInput.placeholder = 'Pronomen eingeben...';
+                pronounsInput.value = '';
+            }
+            if (avatarInput && !avatarInput.value) {
+                avatarInput.placeholder = 'Avatar URL eingeben...';
+                avatarInput.value = '';
+            }
+
+            // Links Fallback-Werte
+            const instagramInput = document.getElementById('instagramLink');
+            const pronounPageInput = document.getElementById('pronounPageLink');
+            const spotifyInput = document.getElementById('spotifyLink');
+            
+            if (instagramInput && !instagramInput.value) {
+                instagramInput.placeholder = 'Instagram URL eingeben...';
+                instagramInput.value = '';
+            }
+            if (pronounPageInput && !pronounPageInput.value) {
+                pronounPageInput.placeholder = 'Pronoun Page URL eingeben...';
+                pronounPageInput.value = '';
+            }
+            if (spotifyInput && !spotifyInput.value) {
+                spotifyInput.placeholder = 'Spotify URL eingeben...';
+                spotifyInput.value = '';
+            }
+
+            console.log('✅ Fallback-Werte für Content Management gesetzt');
+        } catch (error) {
+            console.warn('⚠️ Fehler beim Setzen der Fallback-Werte:', error);
         }
     }
 
@@ -554,6 +681,7 @@
             });
         } catch (error) {
             console.warn('⚠️ Admin-Log fehlgeschlagen:', error);
+            // Silently fail admin logging - not critical for functionality
         }
     }
 
