@@ -56,6 +56,7 @@
         loadHiCounterStats();
         checkSystemStatus();
         loadRecentActivity();
+        loadExistingContent(); // Content-Daten laden
         setupEventListeners();
     }
 
@@ -237,6 +238,35 @@
         // Content Management
         setupContentManagement();
 
+        // Manual Counter Controls
+        const setCounterBtn = document.getElementById('setCounterBtn');
+        const addOneBtn = document.getElementById('addOneBtn');
+        const removeOneBtn = document.getElementById('removeOneBtn');
+
+        if (setCounterBtn) {
+            setCounterBtn.addEventListener('click', handleSetCounter);
+        }
+
+        if (addOneBtn) {
+            addOneBtn.addEventListener('click', () => handleIncrementCounter(1));
+        }
+
+        if (removeOneBtn) {
+            removeOneBtn.addEventListener('click', () => handleIncrementCounter(-1));
+        }
+
+        // Profile Update Button
+        const updateProfileBtn = document.getElementById('updateProfileBtn');
+        if (updateProfileBtn) {
+            updateProfileBtn.addEventListener('click', handleUpdateProfile);
+        }
+
+        // Links Update Button
+        const updateLinksBtn = document.getElementById('updateLinksBtn');
+        if (updateLinksBtn) {
+            updateLinksBtn.addEventListener('click', handleUpdateLinks);
+        }
+
         // Quick Actions
         setupQuickActions();
     }
@@ -329,27 +359,40 @@
 
     // Profile-Update verarbeiten
     async function handleUpdateProfile() {
-        const name = document.getElementById('profileName').value;
-        const pronouns = document.getElementById('profilePronouns').value;
-        const avatarUrl = document.getElementById('avatarUrl').value;
+        if (!db) {
+            showNotification('Keine Datenbank-Verbindung', 'error');
+            return;
+        }
 
-        if (!name.trim()) {
-            showNotification('Name ist erforderlich', 'error');
+        const name = document.getElementById('profileName').value.trim();
+        const pronouns = document.getElementById('profilePronouns').value.trim();
+        const avatarUrl = document.getElementById('avatarUrl').value.trim();
+
+        if (!name || !pronouns) {
+            showNotification('Name und Pronomen sind erforderlich', 'error');
             return;
         }
 
         try {
-            const profileRef = db.collection('content').doc('profile');
-            await profileRef.set({
-                name: name.trim(),
-                pronouns: pronouns.trim(),
-                avatarUrl: avatarUrl.trim(),
+            const profileData = {
+                name,
+                pronouns,
                 lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedBy: currentUser.email
-            }, { merge: true });
+            };
 
-            await logAdminActivity('profile_update', { name, pronouns, avatarUrl });
+            if (avatarUrl) {
+                profileData.avatarUrl = avatarUrl;
+            }
+
+            await db.collection('content').doc('profile').set(profileData, { merge: true });
+
+            await logAdminActivity('profile_updated', { name, pronouns, avatarUrl });
+
             showNotification('Profile erfolgreich aktualisiert', 'success');
+
+            // Update main website immediately if same domain
+            updateMainWebsite('profile', profileData);
 
         } catch (error) {
             console.error('Fehler beim Aktualisieren des Profiles:', error);
@@ -359,22 +402,32 @@
 
     // Links-Update verarbeiten
     async function handleUpdateLinks() {
-        const instagram = document.getElementById('instagramLink').value;
-        const pronounPage = document.getElementById('pronounPageLink').value;
-        const spotify = document.getElementById('spotifyLink').value;
+        if (!db) {
+            showNotification('Keine Datenbank-Verbindung', 'error');
+            return;
+        }
+
+        const instagramLink = document.getElementById('instagramLink').value.trim();
+        const pronounPageLink = document.getElementById('pronounPageLink').value.trim();
+        const spotifyLink = document.getElementById('spotifyLink').value.trim();
 
         try {
-            const linksRef = db.collection('content').doc('socialLinks');
-            await linksRef.set({
-                instagram: instagram.trim(),
-                pronounPage: pronounPage.trim(),
-                spotify: spotify.trim(),
+            const linksData = {
+                instagram: instagramLink,
+                pronounPage: pronounPageLink,
+                spotify: spotifyLink,
                 lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedBy: currentUser.email
-            }, { merge: true });
+            };
 
-            await logAdminActivity('links_update', { instagram, pronounPage, spotify });
+            await db.collection('content').doc('socialLinks').set(linksData, { merge: true });
+
+            await logAdminActivity('links_updated', linksData);
+
             showNotification('Social Links erfolgreich aktualisiert', 'success');
+
+            // Update main website immediately if same domain
+            updateMainWebsite('links', linksData);
 
         } catch (error) {
             console.error('Fehler beim Aktualisieren der Links:', error);
@@ -382,31 +435,66 @@
         }
     }
 
-    // Aktuellen Content laden
-    async function loadCurrentContent() {
+    // Update main website content (if on same domain)
+    function updateMainWebsite(type, data) {
+        try {
+            if (type === 'profile') {
+                // Update if elements exist (for testing on same domain)
+                const nameEl = document.querySelector('.name');
+                const pronounsEl = document.querySelector('.pronouns');
+                const avatarEl = document.querySelector('.avatar');
+
+                if (nameEl && data.name) nameEl.textContent = data.name;
+                if (pronounsEl && data.pronouns) pronounsEl.textContent = data.pronouns;
+                if (avatarEl && data.avatarUrl) avatarEl.src = data.avatarUrl;
+            }
+
+            if (type === 'links') {
+                // Update social links if elements exist
+                const socialBtns = document.querySelectorAll('.social-btn');
+                socialBtns.forEach(btn => {
+                    if (btn.classList.contains('instagram') && data.instagram) {
+                        btn.href = data.instagram;
+                    }
+                    if (btn.classList.contains('pronoun') && data.pronounPage) {
+                        btn.href = data.pronounPage;
+                    }
+                    if (btn.classList.contains('spotify') && data.spotify) {
+                        btn.href = data.spotify;
+                    }
+                });
+            }
+        } catch (error) {
+            // Silent fail - main website might not be accessible
+            console.log('Main website update skipped:', error.message);
+        }
+    }
+
+    // Load existing content data
+    async function loadExistingContent() {
         if (!db) return;
 
         try {
-            // Profile-Daten laden
+            // Load profile data
             const profileDoc = await db.collection('content').doc('profile').get();
             if (profileDoc.exists) {
                 const data = profileDoc.data();
-                document.getElementById('profileName').value = data.name || '';
-                document.getElementById('profilePronouns').value = data.pronouns || '';
-                document.getElementById('avatarUrl').value = data.avatarUrl || '';
+                if (data.name) document.getElementById('profileName').value = data.name;
+                if (data.pronouns) document.getElementById('profilePronouns').value = data.pronouns;
+                if (data.avatarUrl) document.getElementById('avatarUrl').value = data.avatarUrl;
             }
 
-            // Social Links laden
+            // Load links data
             const linksDoc = await db.collection('content').doc('socialLinks').get();
             if (linksDoc.exists) {
                 const data = linksDoc.data();
-                document.getElementById('instagramLink').value = data.instagram || '';
-                document.getElementById('pronounPageLink').value = data.pronounPage || '';
-                document.getElementById('spotifyLink').value = data.spotify || '';
+                if (data.instagram) document.getElementById('instagramLink').value = data.instagram;
+                if (data.pronounPage) document.getElementById('pronounPageLink').value = data.pronounPage;
+                if (data.spotify) document.getElementById('spotifyLink').value = data.spotify;
             }
 
         } catch (error) {
-            console.error('Fehler beim Laden des Contents:', error);
+            console.error('Fehler beim Laden der Content-Daten:', error);
         }
     }
 
@@ -486,6 +574,69 @@
             });
         } catch (error) {
             console.warn('⚠️ Admin-Log fehlgeschlagen:', error);
+        }
+    }
+
+    // Manual Counter Controls
+    async function handleSetCounter() {
+        const input = document.getElementById('manualCountInput');
+        const newValue = parseInt(input.value);
+
+        if (isNaN(newValue) || newValue < 0) {
+            showNotification('Bitte gib eine gültige Zahl ein', 'error');
+            return;
+        }
+
+        if (!db) {
+            showNotification('Keine Datenbank-Verbindung', 'error');
+            return;
+        }
+
+        try {
+            const hiCountRef = db.collection('counters').doc('hiCount');
+            await hiCountRef.update({
+                count: newValue,
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedBy: currentUser.email
+            });
+
+            await logAdminActivity('counter_set', { 
+                newValue, 
+                previousValue: 'unknown' 
+            });
+
+            input.value = '';
+            showNotification(`Counter auf ${newValue} gesetzt`, 'success');
+
+        } catch (error) {
+            console.error('Fehler beim Setzen des Counters:', error);
+            showNotification('Fehler beim Setzen des Counters', 'error');
+        }
+    }
+
+    // Counter Increment/Decrement
+    async function handleIncrementCounter(increment) {
+        if (!db) {
+            showNotification('Keine Datenbank-Verbindung', 'error');
+            return;
+        }
+
+        try {
+            const hiCountRef = db.collection('counters').doc('hiCount');
+            await hiCountRef.update({
+                count: firebase.firestore.FieldValue.increment(increment),
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedBy: currentUser.email
+            });
+
+            await logAdminActivity('counter_increment', { increment });
+
+            const action = increment > 0 ? `+${increment}` : `${increment}`;
+            showNotification(`Counter ${action}`, 'success');
+
+        } catch (error) {
+            console.error('Fehler beim Ändern des Counters:', error);
+            showNotification('Fehler beim Ändern des Counters', 'error');
         }
     }
 
