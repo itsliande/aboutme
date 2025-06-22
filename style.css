@@ -222,8 +222,8 @@ body::before {
 
 /* Say Hi Button - Ultra Modern */
 .say-hi-btn {
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-    border: none;
+    background: var(--accent-primary);
+    border: 1px solid var(--accent-primary);
     border-radius: 50px;
     padding: 18px 36px;
     color: white;
@@ -250,7 +250,7 @@ body::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, var(--accent-secondary), var(--accent-purple));
+    background: var(--accent-secondary);
     opacity: 0;
     transition: all 0.3s ease;
 }
@@ -723,8 +723,8 @@ body::before {
 /* Login Button */
 .login-btn {
     width: 100%;
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-    border: none;
+    background: var(--accent-primary);
+    border: 1px solid var(--accent-primary);
     border-radius: 16px;
     padding: 18px 24px;
     color: white;
@@ -942,13 +942,13 @@ body::before {
 
 /* Button Varianten */
 .btn.primary, .admin-btn.primary {
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    background: var(--accent-primary);
     color: white;
-    border: 1px solid transparent;
+    border: 1px solid var(--accent-primary);
 }
 
 .btn.primary::before, .admin-btn.primary::before {
-    background: linear-gradient(135deg, var(--accent-secondary), var(--accent-purple));
+    background: var(--accent-secondary);
 }
 
 .btn.secondary, .admin-btn.secondary {
@@ -962,31 +962,31 @@ body::before {
 }
 
 .btn.danger, .admin-btn.danger {
-    background: linear-gradient(135deg, var(--accent-secondary), #ff4757);
+    background: var(--accent-secondary);
     color: white;
-    border: 1px solid transparent;
+    border: 1px solid var(--accent-secondary);
 }
 
 .btn.danger::before, .admin-btn.danger::before {
-    background: linear-gradient(135deg, #ff4757, #ff3742);
+    background: #ff4757;
 }
 
 .btn.success, .admin-btn.success {
-    background: linear-gradient(135deg, var(--accent-success), #00d2d3);
+    background: var(--accent-success);
     color: white;
-    border: 1px solid transparent;
+    border: 1px solid var(--accent-success);
 }
 
 .btn.warning, .admin-btn.warning {
-    background: linear-gradient(135deg, var(--accent-warning), #ffa726);
+    background: var(--accent-warning);
     color: white;
-    border: 1px solid transparent;
+    border: 1px solid var(--accent-warning);
 }
 
 .btn.info, .admin-btn.info {
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-purple));
+    background: var(--accent-primary);
     color: white;
-    border: 1px solid transparent;
+    border: 1px solid var(--accent-primary);
 }
 
 .btn:hover::before, .admin-btn:hover::before, 
@@ -997,8 +997,9 @@ body::before {
 
 /* Say Hi Button spezifisch */
 .say-hi-btn {
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    background: var(--accent-primary);
     color: white;
+    border: 1px solid var(--accent-primary);
     border-radius: 50px;
     padding: 18px 36px;
     min-width: 200px;
@@ -1006,22 +1007,24 @@ body::before {
 }
 
 .say-hi-btn::before {
-    background: linear-gradient(135deg, var(--accent-secondary), var(--accent-purple));
+    background: var(--accent-secondary);
 }
 
 .say-hi-btn.disabled {
-    background: linear-gradient(135deg, #2a2a3a, #3a3a4a);
+    background: #3a3a4a;
+    border-color: #3a3a4a;
 }
 
 /* Login Button spezifisch */
 .login-btn, .admin-login-btn {
     width: 100%;
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    background: var(--accent-primary);
     color: white;
+    border: 1px solid var(--accent-primary);
 }
 
 .login-btn::before, .admin-login-btn::before {
-    background: linear-gradient(135deg, var(--accent-secondary), var(--accent-purple));
+    background: var(--accent-secondary);
 }
 
 /* Social Buttons */
@@ -1350,7 +1353,7 @@ body::before {
     width: 80px;
     height: 80px;
     margin: 0 auto 2rem;
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    background: var(--accent-primary);
     border-radius: 20px;
     display: flex;
     align-items: center;
@@ -1438,8 +1441,8 @@ body::before {
 
 /* Admin Login Button */
 .admin-login-btn {
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-    border: none;
+    background: var(--accent-primary);
+    border: 1px solid var(--accent-primary);
     border-radius: 16px;
     padding: 1.25rem 2rem;
     color: white;

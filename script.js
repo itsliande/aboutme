@@ -405,6 +405,34 @@ function updateSocialLinks(data) {
     }
 }
 
+// Echtzeit-Updates für Content
+function setupContentRealtimeUpdates() {
+    if (!window.firestoreDb) return;
+
+    try {
+        // Profile Updates überwachen
+        window.firestoreDb.collection('content').doc('profile').onSnapshot((doc) => {
+            if (doc.exists) {
+                const data = doc.data();
+                updateProfileDisplay(data);
+                console.log('✅ Profile live aktualisiert:', data);
+            }
+        });
+
+        // Social Links Updates überwachen  
+        window.firestoreDb.collection('content').doc('socialLinks').onSnapshot((doc) => {
+            if (doc.exists) {
+                const data = doc.data();
+                updateSocialLinks(data);
+                console.log('✅ Social Links live aktualisiert:', data);
+            }
+        });
+
+    } catch (error) {
+        console.error('Fehler bei Echtzeit-Updates:', error);
+    }
+}
+
 // Page Load Animation
 document.addEventListener('DOMContentLoaded', function() {
     // Firebase Status sofort prüfen
@@ -455,6 +483,9 @@ window.addEventListener('firebaseReady', function() {
     });
     loadHiCount();
     loadContentFromFirebase(); // Lade auch Content von Firebase
+    
+    // Echtzeitaktualisierungen für Content einrichten
+    setupContentRealtimeUpdates();
 });
 
 // Kontinuierliche Überprüfung für Firebase Status

@@ -238,35 +238,6 @@
         // Content Management
         setupContentManagement();
 
-        // Manual Counter Controls
-        const setCounterBtn = document.getElementById('setCounterBtn');
-        const addOneBtn = document.getElementById('addOneBtn');
-        const removeOneBtn = document.getElementById('removeOneBtn');
-
-        if (setCounterBtn) {
-            setCounterBtn.addEventListener('click', handleSetCounter);
-        }
-
-        if (addOneBtn) {
-            addOneBtn.addEventListener('click', () => handleIncrementCounter(1));
-        }
-
-        if (removeOneBtn) {
-            removeOneBtn.addEventListener('click', () => handleIncrementCounter(-1));
-        }
-
-        // Profile Update Button
-        const updateProfileBtn = document.getElementById('updateProfileBtn');
-        if (updateProfileBtn) {
-            updateProfileBtn.addEventListener('click', handleUpdateProfile);
-        }
-
-        // Links Update Button
-        const updateLinksBtn = document.getElementById('updateLinksBtn');
-        if (updateLinksBtn) {
-            updateLinksBtn.addEventListener('click', handleUpdateLinks);
-        }
-
         // Quick Actions
         setupQuickActions();
     }
@@ -312,7 +283,7 @@
         }
 
         // Lade aktuelle Content-Daten
-        loadCurrentContent();
+        loadExistingContent();
     }
 
     // Counter-Wert setzen
@@ -479,22 +450,31 @@
             const profileDoc = await db.collection('content').doc('profile').get();
             if (profileDoc.exists) {
                 const data = profileDoc.data();
-                if (data.name) document.getElementById('profileName').value = data.name;
-                if (data.pronouns) document.getElementById('profilePronouns').value = data.pronouns;
-                if (data.avatarUrl) document.getElementById('avatarUrl').value = data.avatarUrl;
+                const nameInput = document.getElementById('profileName');
+                const pronounsInput = document.getElementById('profilePronouns');
+                const avatarInput = document.getElementById('avatarUrl');
+                
+                if (nameInput && data.name) nameInput.value = data.name;
+                if (pronounsInput && data.pronouns) pronounsInput.value = data.pronouns;
+                if (avatarInput && data.avatarUrl) avatarInput.value = data.avatarUrl;
             }
 
             // Load links data
             const linksDoc = await db.collection('content').doc('socialLinks').get();
             if (linksDoc.exists) {
                 const data = linksDoc.data();
-                if (data.instagram) document.getElementById('instagramLink').value = data.instagram;
-                if (data.pronounPage) document.getElementById('pronounPageLink').value = data.pronounPage;
-                if (data.spotify) document.getElementById('spotifyLink').value = data.spotify;
+                const instagramInput = document.getElementById('instagramLink');
+                const pronounPageInput = document.getElementById('pronounPageLink');
+                const spotifyInput = document.getElementById('spotifyLink');
+                
+                if (instagramInput && data.instagram) instagramInput.value = data.instagram;
+                if (pronounPageInput && data.pronounPage) pronounPageInput.value = data.pronounPage;
+                if (spotifyInput && data.spotify) spotifyInput.value = data.spotify;
             }
 
         } catch (error) {
             console.error('Fehler beim Laden der Content-Daten:', error);
+            showNotification('Fehler beim Laden der Content-Daten', 'error');
         }
     }
 
@@ -574,69 +554,6 @@
             });
         } catch (error) {
             console.warn('⚠️ Admin-Log fehlgeschlagen:', error);
-        }
-    }
-
-    // Manual Counter Controls
-    async function handleSetCounter() {
-        const input = document.getElementById('manualCountInput');
-        const newValue = parseInt(input.value);
-
-        if (isNaN(newValue) || newValue < 0) {
-            showNotification('Bitte gib eine gültige Zahl ein', 'error');
-            return;
-        }
-
-        if (!db) {
-            showNotification('Keine Datenbank-Verbindung', 'error');
-            return;
-        }
-
-        try {
-            const hiCountRef = db.collection('counters').doc('hiCount');
-            await hiCountRef.update({
-                count: newValue,
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedBy: currentUser.email
-            });
-
-            await logAdminActivity('counter_set', { 
-                newValue, 
-                previousValue: 'unknown' 
-            });
-
-            input.value = '';
-            showNotification(`Counter auf ${newValue} gesetzt`, 'success');
-
-        } catch (error) {
-            console.error('Fehler beim Setzen des Counters:', error);
-            showNotification('Fehler beim Setzen des Counters', 'error');
-        }
-    }
-
-    // Counter Increment/Decrement
-    async function handleIncrementCounter(increment) {
-        if (!db) {
-            showNotification('Keine Datenbank-Verbindung', 'error');
-            return;
-        }
-
-        try {
-            const hiCountRef = db.collection('counters').doc('hiCount');
-            await hiCountRef.update({
-                count: firebase.firestore.FieldValue.increment(increment),
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedBy: currentUser.email
-            });
-
-            await logAdminActivity('counter_increment', { increment });
-
-            const action = increment > 0 ? `+${increment}` : `${increment}`;
-            showNotification(`Counter ${action}`, 'success');
-
-        } catch (error) {
-            console.error('Fehler beim Ändern des Counters:', error);
-            showNotification('Fehler beim Ändern des Counters', 'error');
         }
     }
 
