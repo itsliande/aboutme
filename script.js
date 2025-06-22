@@ -265,6 +265,16 @@ function showNotification(message, type = 'default') {
 
 // Page Load Animation
 document.addEventListener('DOMContentLoaded', function() {
+    // Firebase Status sofort prüfen
+    console.log('DOM geladen - prüfe Firebase Status...');
+    if (window.firebaseLoaded && window.firestoreDb) {
+        console.log('🔄 Firebase bereits verfügbar - starte Hi-Counter');
+        firebaseReady = true;
+        loadHiCount();
+    } else {
+        console.log('⏳ Warte auf Firebase...');
+    }
+    
     // Staggered animation for cards
     const cards = document.querySelectorAll('.profile-card, .about-card, .social-card');
     cards.forEach((card, index) => {
@@ -301,12 +311,30 @@ window.addEventListener('firebaseReady', function() {
     loadHiCount();
 });
 
-// Fallback falls Firebase nicht lädt
-setTimeout(() => {
-    if (!firebaseReady) {
-        console.log('⚠️  Firebase Fallback nach 2s - verwende localStorage');
-        loadHiCountFromLocal();
-    } else {
-        console.log('✅ Firebase erfolgreich geladen, kein Fallback erforderlich');
+// Kontinuierliche Überprüfung für Firebase Status
+function checkFirebaseStatus() {
+    if (window.firebaseLoaded && window.firestoreDb && !firebaseReady) {
+        console.log('🔄 Firebase Status erkannt - initialisiere Hi-Counter');
+        firebaseReady = true;
+        loadHiCount();
+        return true;
     }
-}, 2000);
+    return false;
+}
+
+// Überprüfung alle 500ms für die ersten 5 Sekunden
+let checkCount = 0;
+const firebaseChecker = setInterval(() => {
+    checkCount++;
+    console.log(`🔍 Firebase Check #${checkCount}...`);
+    
+    if (checkFirebaseStatus() || checkCount >= 10) {
+        clearInterval(firebaseChecker);
+        if (checkCount >= 10 && !firebaseReady) {
+            console.log('⚠️  Firebase Timeout - verwende localStorage Fallback');
+            loadHiCountFromLocal();
+        }
+    }
+}, 500);
+
+
