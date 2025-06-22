@@ -33,6 +33,7 @@
             testRef.get().then(() => {
                 console.log('✅ Firestore Verbindung erfolgreich');
                 console.log('✅ Security Rules korrekt konfiguriert');
+                console.log('🚀 Firebase ist bereit für Hi-Counter Synchronisation');
             }).catch((error) => {
                 console.error('❌ Firestore Verbindung fehlgeschlagen:', error);
                 console.error('Mögliche Ursachen:');
@@ -48,6 +49,7 @@
 
             // Event für erfolgreiche Initialisierung
             window.dispatchEvent(new CustomEvent('firebaseReady'));
+            console.log('🔥 FirebaseReady Event dispatched');
             
         } catch (error) {
             console.error('❌ Firebase Initialisierung fehlgeschlagen:', error);

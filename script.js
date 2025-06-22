@@ -292,14 +292,21 @@ document.addEventListener('DOMContentLoaded', function() {
 // Firebase Ready Event Listener
 window.addEventListener('firebaseReady', function() {
     firebaseReady = true;
-    console.log('Firebase ist bereit - lade Hi-Counter');
+    console.log('🎯 Firebase Ready Event empfangen - lade Hi-Counter');
+    console.log('Firebase Status:', { 
+        ready: firebaseReady, 
+        dbAvailable: !!window.firestoreDb,
+        appAvailable: !!window.firebaseApp
+    });
     loadHiCount();
 });
 
 // Fallback falls Firebase nicht lädt
 setTimeout(() => {
     if (!firebaseReady) {
-        console.log('Firebase Fallback - verwende localStorage');
+        console.log('⚠️  Firebase Fallback nach 2s - verwende localStorage');
         loadHiCountFromLocal();
+    } else {
+        console.log('✅ Firebase erfolgreich geladen, kein Fallback erforderlich');
     }
 }, 2000);
