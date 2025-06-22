@@ -5,122 +5,146 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Lian's Website</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Firebase SDK v8 (compat) für GitHub Pages -->
+    <!-- Firebase SDK v8 (compat) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
     <div class="admin-container">
-        <div class="admin-header">
-            <div>
-                <h1 class="admin-title">
-                    <i class="fas fa-tachometer-alt"></i>
-                    Admin Dashboard
-                </h1>
-                <p style="color: var(--text-muted); margin-top: 0.5rem;">
-                    Willkommen im Admin-Bereich von Lian's Website
-                </p>
+        <!-- Admin Header -->
+        <header class="admin-header">
+            <div class="admin-header-left">
+                <h1><i class="fas fa-shield-halved"></i> Admin Dashboard</h1>
+                <span class="admin-user-info" id="adminUserInfo">Loading...</span>
             </div>
-            <button class="logout-btn" onclick="logout()">
-                <i class="fas fa-sign-out-alt"></i>
-                Logout
-            </button>
-        </div>
-
-        <div class="admin-grid">
-            <div class="admin-card">
-                <h3>
-                    <i class="fas fa-heart"></i>
-                    Hi-Counter
-                </h3>
-                <div class="stat-value" id="adminHiCount">-</div>
-                <div class="stat-label">Gesamt Hi's erhalten</div>
+            <div class="admin-header-right">
+                <button class="admin-btn secondary" onclick="window.open('index.html', '_blank')">
+                    <i class="fas fa-external-link-alt"></i>
+                    Website anzeigen
+                </button>
+                <button class="admin-btn danger" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Abmelden
+                </button>
             </div>
+        </header>
 
-            <div class="admin-card">
-                <h3>
-                    <i class="fas fa-calendar-day"></i>
-                    Heute
-                </h3>
-                <div class="stat-value" id="todayHiCount">-</div>
-                <div class="stat-label">Hi's heute</div>
-            </div>
-
-            <div class="admin-card">
-                <h3>
-                    <i class="fas fa-chart-line"></i>
-                    Diese Woche
-                </h3>
-                <div class="stat-value" id="weekHiCount">-</div>
-                <div class="stat-label">Hi's diese Woche</div>
-            </div>
-
-            <div class="admin-card">
-                <h3>
-                    <i class="fas fa-clock"></i>
-                    Letztes Hi
-                </h3>
-                <div class="stat-value" id="lastHiTime" style="font-size: 1.5rem;">-</div>
-                <div class="stat-label">Letzte Aktivität</div>
-            </div>
-        </div>
-
-        <div class="admin-grid">
-            <div class="admin-card">
-                <h3>
-                    <i class="fas fa-tools"></i>
-                    Counter Management
-                </h3>
-                <div style="margin-top: 1.5rem;">
-                    <button class="login-btn" onclick="resetDailyCounter()" style="width: 100%; margin-bottom: 1rem;">
-                        <i class="fas fa-redo"></i>
-                        Täglichen Counter zurücksetzen
-                    </button>
-                    <button class="logout-btn" onclick="resetTotalCounter()" style="width: 100%;">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Gesamt-Counter zurücksetzen
-                    </button>
+        <!-- Admin Dashboard Grid -->
+        <main class="admin-main">
+            <!-- Hi-Counter Stats -->
+            <section class="admin-card highlight">
+                <div class="admin-card-header">
+                    <h2><i class="fas fa-heart"></i> Hi-Counter Statistiken</h2>
+                    <span class="admin-status" id="hiCounterStatus">Live</span>
                 </div>
-            </div>
-
-            <div class="admin-card">
-                <h3>
-                    <i class="fas fa-info-circle"></i>
-                    System Status
-                </h3>
-                <div style="margin-top: 1.5rem;">
-                    <div class="status-item">
-                        <strong>Firebase:</strong> 
-                        <span id="firebaseStatus" style="color: var(--accent-warning);">Prüfing...</span>
+                <div class="admin-card-content">
+                    <div class="stat-large">
+                        <span class="stat-number" id="currentHiCount">0</span>
+                        <span class="stat-label">Gesamt Hi's</span>
                     </div>
-                    <div class="status-item" style="margin-top: 0.5rem;">
-                        <strong>Database:</strong> 
-                        <span id="databaseStatus" style="color: var(--accent-warning);">Prüfing...</span>
-                    </div>
-                    <div class="status-item" style="margin-top: 0.5rem;">
-                        <strong>Auth:</strong> 
-                        <span id="authStatus" style="color: var(--accent-warning);">Prüfing...</span>
+                    <div class="stat-grid">
+                        <div class="stat-item">
+                            <span class="stat-value" id="todayHis">0</span>
+                            <span class="stat-label">Heute</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="weekHis">0</span>
+                            <span class="stat-label">Diese Woche</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="avgPerDay">0</span>
+                            <span class="stat-label">⌀ Pro Tag</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
+                <div class="admin-card-actions">
+                    <button class="admin-btn primary" id="refreshStatsBtn">
+                        <i class="fas fa-sync-alt"></i>
+                        Aktualisieren
+                    </button>
+                    <button class="admin-btn danger" id="resetCounterBtn">
+                        <i class="fas fa-undo"></i>
+                        Counter zurücksetzen
+                    </button>
+                </div>
+            </section>
 
-        <div class="admin-card">
-            <h3>
-                <i class="fas fa-list"></i>
-                Aktivitäts-Log
-            </h3>
-            <div id="activityLog" style="margin-top: 1.5rem; max-height: 300px; overflow-y: auto;">
-                <p style="color: var(--text-muted);">Lade Aktivitäts-Log...</p>
-            </div>
-        </div>
+            <!-- System Status -->
+            <section class="admin-card">
+                <div class="admin-card-header">
+                    <h2><i class="fas fa-server"></i> System Status</h2>
+                </div>
+                <div class="admin-card-content">
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <i class="fas fa-database"></i>
+                            <span>Firebase</span>
+                            <span class="status-indicator" id="firebaseStatus">Checking...</span>
+                        </div>
+                        <div class="status-item">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Authentication</span>
+                            <span class="status-indicator" id="authStatus">Checking...</span>
+                        </div>
+                        <div class="status-item">
+                            <i class="fas fa-cloud"></i>
+                            <span>Firestore</span>
+                            <span class="status-indicator" id="firestoreStatus">Checking...</span>
+                        </div>
+                        <div class="status-item">
+                            <i class="fas fa-globe"></i>
+                            <span>Website</span>
+                            <span class="status-indicator" id="websiteStatus">Checking...</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Recent Activity -->
+            <section class="admin-card">
+                <div class="admin-card-header">
+                    <h2><i class="fas fa-history"></i> Letzte Aktivitäten</h2>
+                </div>
+                <div class="admin-card-content">
+                    <div class="activity-list" id="activityList">
+                        <div class="activity-loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            Lade Aktivitäten...
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quick Actions -->
+            <section class="admin-card">
+                <div class="admin-card-header">
+                    <h2><i class="fas fa-tools"></i> Schnellaktionen</h2>
+                </div>
+                <div class="admin-card-content">
+                    <div class="quick-actions">
+                        <button class="admin-btn info" id="exportDataBtn">
+                            <i class="fas fa-download"></i>
+                            Daten exportieren
+                        </button>
+                        <button class="admin-btn warning" id="clearLogsBtn">
+                            <i class="fas fa-trash-alt"></i>
+                            Logs löschen
+                        </button>
+                        <button class="admin-btn success" id="testSystemBtn">
+                            <i class="fas fa-vial"></i>
+                            System testen
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
     </div>
 
-    <!-- Firebase Configuration -->
-    <script src="firebase-config.js"></script>
-    <script src="admin.js"></script>
+    <!-- Admin Scripts -->
+    <script src="admin-dashboard.js"></script>
 </body>
 </html>

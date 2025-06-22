@@ -5,49 +5,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login - Lian's Website</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Firebase SDK v8 (compat) für GitHub Pages -->
+    <!-- Firebase SDK v8 (compat) für Authentication -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-card">
-            <div class="login-header">
-                <i class="fas fa-shield-halved"></i>
+    <div class="admin-login-container">
+        <div class="admin-login-card">
+            <div class="admin-login-header">
+                <div class="admin-icon">
+                    <i class="fas fa-shield-halved"></i>
+                </div>
                 <h1>Admin Login</h1>
-                <p>Sichere Anmeldung für Admin-Bereich</p>
+                <p>Sicherer Zugang zum Admin-Bereich</p>
             </div>
             
-            <form id="loginForm" class="login-form">
+            <form id="adminLoginForm" class="admin-login-form">
                 <div class="form-group">
-                    <label for="email">
+                    <label for="adminEmail">
                         <i class="fas fa-envelope"></i>
-                        E-Mail
+                        E-Mail-Adresse
                     </label>
-                    <input type="email" id="email" required autocomplete="email" placeholder="admin@example.com">
+                    <input 
+                        type="email" 
+                        id="adminEmail" 
+                        required 
+                        autocomplete="email"
+                        placeholder="admin@example.com"
+                    >
                 </div>
                 
                 <div class="form-group">
-                    <label for="password">
+                    <label for="adminPassword">
                         <i class="fas fa-lock"></i>
                         Passwort
                     </label>
-                    <input type="password" id="password" required autocomplete="current-password" placeholder="••••••••">
+                    <input 
+                        type="password" 
+                        id="adminPassword" 
+                        required 
+                        autocomplete="current-password"
+                        placeholder="••••••••"
+                    >
                 </div>
                 
-                <button type="submit" class="login-btn" id="loginBtn">
+                <button type="submit" class="admin-login-btn" id="adminLoginBtn">
                     <i class="fas fa-sign-in-alt"></i>
-                    Anmelden
+                    <span>Anmelden</span>
                 </button>
             </form>
             
-            <div class="login-status" id="loginStatus"></div>
+            <div class="admin-login-status" id="adminLoginStatus"></div>
             
-            <div class="login-footer">
-                <a href="index.html" class="back-link">
+            <div class="admin-login-footer">
+                <a href="index.html" class="back-to-home">
                     <i class="fas fa-arrow-left"></i>
                     Zurück zur Hauptseite
                 </a>
@@ -55,8 +70,6 @@
         </div>
     </div>
 
-    <!-- Firebase Configuration -->
-    <script src="firebase-config.js"></script>
-    <script src="admin-login.js"></script>
+    <script src="admin-auth.js"></script>
 </body>
 </html>
