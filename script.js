@@ -326,80 +326,94 @@ function getTimeUntilNextHi() {
     return { hours, minutes };
 }
 
-// Lade Content von Firebase (erweitert für Admin-Updates)
+// Content aus Firebase laden und HTML aktualisieren
 async function loadContentFromFirebase() {
-    if (!window.firestoreDb) {
-        console.warn('Firestore nicht verfügbar - setze Standard-Werte');
+    if (!db) {
+        console.warn('Firebase nicht verfügbar - verwende statische Inhalte');
         return;
     }
 
-    console.log('🔄 Lade Content von Firebase...');
-
     try {
         // Profile-Daten laden
-        const profileDoc = await window.firestoreDb.collection('content').doc('profile').get();
+        const profileDoc = await db.collection('content').doc('profile').get();
         if (profileDoc.exists) {
             const data = profileDoc.data();
-            console.log('✅ Profile-Daten geladen:', data);
-            updateProfileDisplay(data);
-        } else {
-            console.log('ℹ️ Kein Profile-Dokument gefunden - verwende Standard-HTML-Werte');
+            updateProfileOnPage(data);
         }
 
         // Social Links laden
-        const linksDoc = await window.firestoreDb.collection('content').doc('socialLinks').get();
+        const linksDoc = await db.collection('content').doc('socialLinks').get();
         if (linksDoc.exists) {
             const data = linksDoc.data();
-            console.log('✅ Social-Links geladen:', data);
-            updateSocialLinks(data);
-        } else {
-            console.log('ℹ️ Kein Social-Links-Dokument gefunden - verwende Standard-HTML-Werte');
+            updateSocialLinksOnPage(data);
         }
 
+        // About Items laden
+        const aboutDoc = await db.collection('content').doc('aboutItems').get();
+        if (aboutDoc.exists) {
+            const data = aboutDoc.data();
+            if (data.items && Array.isArray(data.items)) {
+                updateAboutItemsOnPage(data.items);
+            }
+        }
+
+        console.log('✅ Content aus Firebase geladen');
     } catch (error) {
-        console.error('❌ Fehler beim Laden des Contents:', error);
+        console.warn('⚠️ Fehler beim Laden des Contents aus Firebase:', error.message);
     }
 }
 
-// Profile Display aktualisieren
-function updateProfileDisplay(data) {
-    if (data.name) {
-        const nameEl = document.querySelector('.name');
-        if (nameEl) nameEl.textContent = data.name;
-    }
+// Profile-Daten auf der Seite aktualisieren
+function updateProfileOnPage(data) {
+    const nameEl = document.querySelector('.name');
+    const pronounsEl = document.querySelector('.pronouns');
+    const avatarEl = document.querySelector('#avatarImg');
 
-    if (data.pronouns) {
-        const pronounsEl = document.querySelector('.pronouns');
-        if (pronounsEl) pronounsEl.textContent = data.pronouns;
+    if (nameEl && data.name) {
+        nameEl.textContent = data.name;
     }
+    if (pronounsEl && data.pronouns) {
+        pronounsEl.textContent = data.pronouns;
+    }
+    if (avatarEl && data.avatarUrl) {
+        avatarEl.src = data.avatarUrl;
+        avatarEl.alt = `${data.name || 'User'}'s Avatar`;
+    }
+}
 
-    if (data.avatarUrl) {
-        const avatarEl = document.querySelector('.avatar');
-        if (avatarEl) {
-            avatarEl.src = data.avatarUrl;
-            avatarEl.onerror = () => {
-                avatarEl.src = 'https://i.imgur.com/placeholder.jpg';
-            };
+// Social Links auf der Seite aktualisieren
+function updateSocialLinksOnPage(data) {
+    const socialBtns = document.querySelectorAll('.social-btn');
+    
+    socialBtns.forEach(btn => {
+        const href = btn.getAttribute('href');
+        
+        if (href && href.includes('instagram') && data.instagram) {
+            btn.href = data.instagram;
+        } else if (href && href.includes('pronouns.page') && data.pronounPage) {
+            btn.href = data.pronounPage;
+        } else if (href && href.includes('spotify') && data.spotify) {
+            btn.href = data.spotify;
         }
-    }
+    });
 }
 
-// Social Links aktualisieren
-function updateSocialLinks(data) {
-    if (data.instagram) {
-        const instagramEl = document.querySelector('.social-btn.instagram');
-        if (instagramEl) instagramEl.href = data.instagram;
-    }
+// About Items auf der Seite aktualisieren
+function updateAboutItemsOnPage(items) {
+    const aboutItemsContainer = document.querySelector('.about-items');
+    if (!aboutItemsContainer || !Array.isArray(items)) return;
 
-    if (data.pronounPage) {
-        const pronounEl = document.querySelector('.social-btn.pronoun');
-        if (pronounEl) pronounEl.href = data.pronounPage;
-    }
+    aboutItemsContainer.innerHTML = '';
 
-    if (data.spotify) {
-        const spotifyEl = document.querySelector('.social-btn.spotify');
-        if (spotifyEl) spotifyEl.href = data.spotify;
-    }
+    items.forEach(item => {
+        const itemEl = document.createElement('div');
+        itemEl.className = 'about-item';
+        itemEl.innerHTML = `
+            <i class="${item.icon}"></i>
+            <span>${item.text}</span>
+        `;
+        aboutItemsContainer.appendChild(itemEl);
+    });
 }
 
 // Echtzeit-Updates für Content

@@ -298,6 +298,8 @@
     function setupContentManagement() {
         const updateProfileBtn = document.getElementById('updateProfileBtn');
         const updateLinksBtn = document.getElementById('updateLinksBtn');
+        const updateAboutBtn = document.getElementById('updateAboutBtn');
+        const addAboutItemBtn = document.getElementById('addAboutItemBtn');
 
         if (updateProfileBtn) {
             updateProfileBtn.addEventListener('click', handleUpdateProfile);
@@ -306,6 +308,17 @@
         if (updateLinksBtn) {
             updateLinksBtn.addEventListener('click', handleUpdateLinks);
         }
+
+        if (updateAboutBtn) {
+            updateAboutBtn.addEventListener('click', handleUpdateAbout);
+        }
+
+        if (addAboutItemBtn) {
+            addAboutItemBtn.addEventListener('click', addAboutItem);
+        }
+
+        // Remove-Button Event Listener für existierende Items
+        setupRemoveItemListeners();
 
         // Lade aktuelle Content-Daten
         loadExistingContent();
@@ -503,6 +516,181 @@
         }
     }
 
+    // About Me Items verwalten
+    function loadAboutItems(items) {
+        const aboutItemsList = document.getElementById('aboutItemsList');
+        if (!aboutItemsList) return;
+
+        aboutItemsList.innerHTML = '';
+
+        items.forEach((item, index) => {
+            const itemElement = createAboutItemEditor(index, item.icon, item.text);
+            aboutItemsList.appendChild(itemElement);
+        });
+
+        setupRemoveItemListeners();
+    }
+
+    function createAboutItemEditor(index, icon = '', text = '') {
+        const div = document.createElement('div');
+        div.className = 'about-item-editor';
+        div.setAttribute('data-index', index);
+        
+        div.innerHTML = `
+            <div class="form-group">
+                <label>Icon (Font Awesome Klasse)</label>
+                <input type="text" class="about-icon" placeholder="fas fa-star" value="${icon}">
+            </div>
+            <div class="form-group">
+                <label>Text</label>
+                <input type="text" class="about-text" placeholder="Text eingeben..." value="${text}">
+            </div>
+            <button class="admin-btn danger small remove-item-btn">
+                <i class="fas fa-trash"></i>
+                Entfernen
+            </button>
+        `;
+
+        return div;
+    }
+
+    function addAboutItem() {
+        const aboutItemsList = document.getElementById('aboutItemsList');
+        if (!aboutItemsList) return;
+
+        const currentItems = aboutItemsList.querySelectorAll('.about-item-editor');
+        const newIndex = currentItems.length;
+
+        const newItem = createAboutItemEditor(newIndex);
+        aboutItemsList.appendChild(newItem);
+
+        setupRemoveItemListeners();
+        
+        // Focus auf das neue Text-Feld
+        const textInput = newItem.querySelector('.about-text');
+        if (textInput) textInput.focus();
+    }
+
+    function setupRemoveItemListeners() {
+        const removeButtons = document.querySelectorAll('.remove-item-btn');
+        removeButtons.forEach(button => {
+            button.replaceWith(button.cloneNode(true)); // Remove existing listeners
+        });
+
+        // Add new listeners
+        document.querySelectorAll('.remove-item-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const itemEditor = e.target.closest('.about-item-editor');
+                if (itemEditor) {
+                    itemEditor.remove();
+                    updateItemIndices();
+                }
+            });
+        });
+    }
+
+    function updateItemIndices() {
+        const itemEditors = document.querySelectorAll('.about-item-editor');
+        itemEditors.forEach((editor, index) => {
+            editor.setAttribute('data-index', index);
+        });
+    }
+
+    function setDefaultAboutItems() {
+        const defaultItems = [
+            { icon: 'fas fa-rainbow', text: 'Demigirl or Nonbinary Transfem\'ig ldrk and Bi-sexual' },
+            { icon: 'fas fa-heart', text: 'YU Fan (nazis call it linksversifft)' },
+            { icon: 'fas fa-headphones', text: 'Professional listener' },
+            { icon: 'fas fa-star', text: 'Extremely Gay' },
+            { icon: 'fas fa-camera-retro', text: 'Look at my Insta and Pronoun Page' }
+        ];
+
+        loadAboutItems(defaultItems);
+        console.log('✅ Standard About-Items gesetzt');
+    }
+
+    // About Me Update verarbeiten
+    async function handleUpdateAbout() {
+        if (!db) {
+            showNotification('Keine Datenbank-Verbindung', 'error');
+            return;
+        }
+
+        const aboutItemEditors = document.querySelectorAll('.about-item-editor');
+        const items = [];
+
+        // Sammle alle About-Items
+        aboutItemEditors.forEach(editor => {
+            const icon = editor.querySelector('.about-icon').value.trim();
+            const text = editor.querySelector('.about-text').value.trim();
+
+            if (icon && text) {
+                items.push({ icon, text });
+            }
+        });
+
+        if (items.length === 0) {
+            showNotification('Mindestens ein About-Item ist erforderlich', 'error');
+            return;
+        }
+
+        // Show loading state
+        const updateBtn = document.getElementById('updateAboutBtn');
+        if (updateBtn) {
+            updateBtn.disabled = true;
+            updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Speichere...';
+        }
+
+        try {
+            const aboutData = {
+                items,
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedBy: currentUser.email
+            };
+
+            await db.collection('content').doc('aboutItems').set(aboutData, { merge: true });
+
+            // Log nur wenn möglich
+            try {
+                await logAdminActivity('about_items_updated', { itemCount: items.length });
+            } catch (logError) {
+                console.warn('Logging fehlgeschlagen:', logError.message);
+            }
+
+            showNotification('About Me Items erfolgreich aktualisiert', 'success');
+
+            // Update main website immediately if same domain
+            updateMainWebsite('about', { items });
+
+            // Force reload content on main website if possible
+            if (window.opener && !window.opener.closed) {
+                try {
+                    window.opener.loadContentFromFirebase();
+                    console.log('✅ Hauptwebsite Content neu geladen');
+                } catch (e) {
+                    console.log('ℹ️ Hauptwebsite Content-Reload nicht möglich:', e.message);
+                }
+            }
+
+        } catch (error) {
+            console.error('Fehler beim Aktualisieren der About-Items:', error);
+            
+            if (error.code === 'permission-denied') {
+                showNotification('Keine Berechtigung zum Aktualisieren der About-Daten', 'error');
+            } else if (error.code === 'unavailable') {
+                showNotification('Firestore ist momentan nicht verfügbar', 'error');
+            } else {
+                showNotification('Fehler beim Aktualisieren der About-Items: ' + error.message, 'error');
+            }
+        } finally {
+            // Reset button
+            if (updateBtn) {
+                updateBtn.disabled = false;
+                updateBtn.innerHTML = '<i class="fas fa-save"></i> About Me aktualisieren';
+            }
+        }
+    }
+
     // Update main website content (if on same domain)
     function updateMainWebsite(type, data) {
         try {
@@ -531,6 +719,23 @@
                         btn.href = data.spotify;
                     }
                 });
+            }
+
+            if (type === 'about') {
+                // Update About Me items if elements exist
+                const aboutItemsList = document.getElementById('aboutItemsList');
+                if (aboutItemsList) {
+                    aboutItemsList.innerHTML = '';
+                    data.items.forEach(item => {
+                        const itemElement = document.createElement('div');
+                        itemElement.className = 'about-item';
+                        itemElement.innerHTML = `
+                            <i class="${item.icon}"></i>
+                            <span>${item.text}</span>
+                        `;
+                        aboutItemsList.appendChild(itemElement);
+                    });
+                }
             }
         } catch (error) {
             // Silent fail - main website might not be accessible
@@ -591,6 +796,27 @@
             } catch (linksError) {
                 console.warn('Social-Links-Daten konnten nicht geladen werden:', linksError.message);
                 setDefaultLinksValues();
+            }
+
+            // About Me Items laden
+            try {
+                const aboutDoc = await db.collection('content').doc('aboutItems').get();
+                if (aboutDoc.exists) {
+                    const data = aboutDoc.data();
+                    if (data.items && Array.isArray(data.items)) {
+                        loadAboutItems(data.items);
+                        console.log('✅ About-Items-Daten geladen:', data.items);
+                    } else {
+                        console.log('About-Items-Dokument hat keine Items - setze Standard-Werte');
+                        setDefaultAboutItems();
+                    }
+                } else {
+                    console.log('About-Items-Dokument existiert noch nicht - wird beim ersten Speichern erstellt');
+                    setDefaultAboutItems();
+                }
+            } catch (aboutError) {
+                console.warn('About-Items-Daten konnten nicht geladen werden:', aboutError.message);
+                setDefaultAboutItems();
             }
 
         } catch (error) {
