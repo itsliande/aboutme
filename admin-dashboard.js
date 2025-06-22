@@ -523,12 +523,19 @@
 
         aboutItemsList.innerHTML = '';
 
-        items.forEach((item, index) => {
-            const itemElement = createAboutItemEditor(index, item.icon, item.text);
-            aboutItemsList.appendChild(itemElement);
-        });
+        if (items && items.length > 0) {
+            items.forEach((item, index) => {
+                const itemElement = createAboutItemEditor(index, item.icon, item.text);
+                aboutItemsList.appendChild(itemElement);
+            });
+        } else {
+            // Füge ein leeres Item hinzu wenn keine Items vorhanden sind
+            const emptyItem = createAboutItemEditor(0, '', '');
+            aboutItemsList.appendChild(emptyItem);
+        }
 
         setupRemoveItemListeners();
+        setupIconPreview();
     }
 
     function createAboutItemEditor(index, icon = '', text = '') {
@@ -537,18 +544,48 @@
         div.setAttribute('data-index', index);
         
         div.innerHTML = `
-            <div class="form-group">
-                <label>Icon (Font Awesome Klasse)</label>
-                <input type="text" class="about-icon" placeholder="fas fa-star" value="${icon}">
+            <div class="about-item-editor-header">
+                <h4><i class="fas fa-grip-vertical"></i> About Item ${index + 1}</h4>
+                <button type="button" class="admin-btn danger small remove-item-btn" title="Item entfernen">
+                    <i class="fas fa-trash"></i>
+                </button>
             </div>
-            <div class="form-group">
-                <label>Text</label>
-                <input type="text" class="about-text" placeholder="Text eingeben..." value="${text}">
+            <div class="about-item-editor-content">
+                <div class="form-group">
+                    <label for="about-icon-${index}">
+                        <i class="fas fa-icons"></i>
+                        Icon (Font Awesome Klasse)
+                    </label>
+                    <div class="icon-input-group">
+                        <input type="text" 
+                               id="about-icon-${index}"
+                               class="about-icon" 
+                               placeholder="z.B. fas fa-heart, fab fa-instagram" 
+                               value="${icon}"
+                               data-index="${index}">
+                        <div class="icon-preview" id="icon-preview-${index}">
+                            ${icon ? `<i class="${icon}"></i>` : '<i class="fas fa-question"></i>'}
+                        </div>
+                    </div>
+                    <small class="form-hint">
+                        Beispiele: fas fa-heart, fab fa-instagram, fas fa-star, fas fa-music
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label for="about-text-${index}">
+                        <i class="fas fa-edit"></i>
+                        Beschreibungstext
+                    </label>
+                    <textarea 
+                        id="about-text-${index}"
+                        class="about-text" 
+                        placeholder="Beschreibe dich hier..." 
+                        rows="2">${text}</textarea>
+                    <small class="form-hint">
+                        Maximal 100 Zeichen empfohlen für beste Darstellung
+                    </small>
+                </div>
             </div>
-            <button class="admin-btn danger small remove-item-btn">
-                <i class="fas fa-trash"></i>
-                Entfernen
-            </button>
         `;
 
         return div;
@@ -556,44 +593,184 @@
 
     function addAboutItem() {
         const aboutItemsList = document.getElementById('aboutItemsList');
-        if (!aboutItemsList) return;
+        if (!aboutItemsList) {
+            showNotification('About Items Liste nicht gefunden', 'error');
+            return;
+        }
 
         const currentItems = aboutItemsList.querySelectorAll('.about-item-editor');
-        const newIndex = currentItems.length;
+        
+        // Maximal 10 Items erlauben
+        if (currentItems.length >= 10) {
+            showNotification('Maximal 10 About Items erlaubt', 'warning');
+            return;
+        }
 
-        const newItem = createAboutItemEditor(newIndex);
+        const newIndex = currentItems.length;
+        const newItem = createAboutItemEditor(newIndex, '', '');
+        
+        // Smooth Animation beim Hinzufügen
+        newItem.style.opacity = '0';
+        newItem.style.transform = 'translateY(-20px)';
         aboutItemsList.appendChild(newItem);
 
+        // Animation
+        setTimeout(() => {
+            newItem.style.transition = 'all 0.3s ease';
+            newItem.style.opacity = '1';
+            newItem.style.transform = 'translateY(0)';
+        }, 10);
+
         setupRemoveItemListeners();
+        setupIconPreview();
+        updateItemIndices();
         
-        // Focus auf das neue Text-Feld
-        const textInput = newItem.querySelector('.about-text');
-        if (textInput) textInput.focus();
+        // Focus auf das Icon-Feld des neuen Items
+        const iconInput = newItem.querySelector('.about-icon');
+        if (iconInput) {
+            iconInput.focus();
+            iconInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        showNotification('Neues About Item hinzugefügt', 'success');
     }
 
     function setupRemoveItemListeners() {
+        // Entferne alle existierenden Event Listener
         const removeButtons = document.querySelectorAll('.remove-item-btn');
         removeButtons.forEach(button => {
-            button.replaceWith(button.cloneNode(true)); // Remove existing listeners
+            // Clone Button um alte Event Listener zu entfernen
+            const newButton = button.cloneNode(true);
+            button.parentNode.replaceChild(newButton, button);
         });
 
-        // Add new listeners
+        // Füge neue Event Listener hinzu
         document.querySelectorAll('.remove-item-btn').forEach(button => {
             button.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
                 const itemEditor = e.target.closest('.about-item-editor');
-                if (itemEditor) {
-                    itemEditor.remove();
-                    updateItemIndices();
+                if (!itemEditor) return;
+
+                const itemsList = document.getElementById('aboutItemsList');
+                const remainingItems = itemsList.querySelectorAll('.about-item-editor');
+                
+                // Mindestens ein Item muss bleiben
+                if (remainingItems.length <= 1) {
+                    showNotification('Mindestens ein About Item muss vorhanden sein', 'warning');
+                    return;
                 }
+
+                // Bestätigung für das Löschen
+                const textInput = itemEditor.querySelector('.about-text');
+                const text = textInput ? textInput.value.trim() : '';
+                
+                if (text && !confirm(`Item "${text.substring(0, 30)}${text.length > 30 ? '...' : ''}" wirklich löschen?`)) {
+                    return;
+                }
+
+                // Smooth Animation beim Entfernen
+                itemEditor.style.transition = 'all 0.3s ease';
+                itemEditor.style.opacity = '0';
+                itemEditor.style.transform = 'translateX(-20px)';
+                
+                setTimeout(() => {
+                    if (itemEditor.parentNode) {
+                        itemEditor.remove();
+                        updateItemIndices();
+                        showNotification('About Item entfernt', 'success');
+                    }
+                }, 300);
             });
         });
+    }
+
+    function setupIconPreview() {
+        // Setup Icon Preview für alle Icon-Inputs
+        document.querySelectorAll('.about-icon').forEach(input => {
+            // Entferne existierende Event Listener
+            const newInput = input.cloneNode(true);
+            input.parentNode.replaceChild(newInput, input);
+            
+            const index = newInput.getAttribute('data-index') || newInput.id.split('-').pop();
+            const preview = document.getElementById(`icon-preview-${index}`);
+            
+            if (preview) {
+                // Sofortige Vorschau beim Laden
+                updateIconPreview(newInput, preview);
+                
+                // Event Listener für Live-Vorschau
+                newInput.addEventListener('input', () => {
+                    updateIconPreview(newInput, preview);
+                });
+                
+                newInput.addEventListener('blur', () => {
+                    updateIconPreview(newInput, preview);
+                });
+            }
+        });
+    }
+
+    function updateIconPreview(input, preview) {
+        const iconClass = input.value.trim();
+        
+        if (iconClass) {
+            // Validiere Font Awesome Klasse
+            if (iconClass.match(/^(fas|far|fab|fal|fad|fat)\s+fa-[\w-]+$/)) {
+                preview.innerHTML = `<i class="${iconClass}"></i>`;
+                preview.className = 'icon-preview valid';
+                input.classList.remove('error');
+            } else {
+                preview.innerHTML = `<i class="fas fa-exclamation-triangle"></i>`;
+                preview.className = 'icon-preview invalid';
+                input.classList.add('error');
+            }
+        } else {
+            preview.innerHTML = `<i class="fas fa-question"></i>`;
+            preview.className = 'icon-preview empty';
+            input.classList.remove('error');
+        }
     }
 
     function updateItemIndices() {
         const itemEditors = document.querySelectorAll('.about-item-editor');
         itemEditors.forEach((editor, index) => {
             editor.setAttribute('data-index', index);
+            
+            // Update Header
+            const header = editor.querySelector('h4');
+            if (header) {
+                header.innerHTML = `<i class="fas fa-grip-vertical"></i> About Item ${index + 1}`;
+            }
+            
+            // Update IDs und Labels
+            const iconInput = editor.querySelector('.about-icon');
+            const textInput = editor.querySelector('.about-text');
+            const iconLabel = editor.querySelector('label[for^="about-icon"]');
+            const textLabel = editor.querySelector('label[for^="about-text"]');
+            const iconPreview = editor.querySelector('.icon-preview');
+            
+            if (iconInput) {
+                iconInput.id = `about-icon-${index}`;
+                iconInput.setAttribute('data-index', index);
+            }
+            if (textInput) {
+                textInput.id = `about-text-${index}`;
+            }
+            if (iconLabel) {
+                iconLabel.setAttribute('for', `about-icon-${index}`);
+            }
+            if (textLabel) {
+                textLabel.setAttribute('for', `about-text-${index}`);
+            }
+            if (iconPreview) {
+                iconPreview.id = `icon-preview-${index}`;
+            }
         });
+        
+        // Setup Icon Preview nach Index-Update
+        setupIconPreview();
     }
 
     function setDefaultAboutItems() {
