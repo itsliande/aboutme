@@ -1,48 +1,32 @@
-# Firebase Firestore Security Rules Setup
+# Firebase Setup für Content Management
 
-Das Problem liegt an den Firestore Security Rules. Hier sind die Schritte zur Lösung:
+## Problem
+Das Content Management Dashboard zeigt Berechtigungsfehler, da die Firestore-Sicherheitsregeln zu restriktiv sind.
 
-## 1. Firebase Console öffnen
-- Gehe zu [Firebase Console](https://console.firebase.google.com/)
-- Wähle dein Projekt "aboutme-49bfb" aus
+## Lösung
+1. Die Datei `firestore.rules` wurde erstellt mit den richtigen Berechtigungen
+2. Diese Regeln müssen in der Firebase Console bereitgestellt werden
 
-## 2. Firestore Security Rules ändern
-- Klicke auf "Firestore Database" im linken Menü
-- Gehe zum Tab "Rules" 
-- Ersetze die aktuellen Rules mit:
+## Firebase Console Setup
+1. Gehe zur [Firebase Console](https://console.firebase.google.com)
+2. Wähle das Projekt "aboutme-49bfb" aus
+3. Navigiere zu "Firestore Database" > "Regeln"
+4. Ersetze die vorhandenen Regeln mit dem Inhalt aus `firestore.rules`
+5. Klicke auf "Veröffentlichen"
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Erlaubt Lesen und Schreiben für die counters Collection
-    match /counters/{document} {
-      allow read, write: if true;
-    }
-    
-    // Optional: Für andere Collections restriktiver
-    match /{document=**} {
-      allow read, write: if false;
-    }
-  }
-}
-```
+## Was wurde geändert
+- **Buttons**: Alle Gradienten-Effekte entfernt für klareres, einfacheres Design
+- **Content Management**: Robustere Fehlerbehandlung implementiert
+- **Firebase**: Sicherheitsregeln erstellt, die sowohl öffentlichen Lesezugriff als auch Admin-Schreibzugriff ermöglichen
 
-## 3. Rules veröffentlichen
-- Klicke auf "Publish" um die neuen Rules zu aktivieren
+## Berechtigungsstruktur
+- `counters/*`: Öffentlich lesbar, authentifizierte Benutzer können schreiben
+- `content/*`: Öffentlich lesbar, nur Admin (stuff@itslian.de) kann schreiben
+- `admin_logs/*`: Nur Admin kann lesen und schreiben
 
-## Alternative: Nur Hi-Counter erlauben
-Für mehr Sicherheit, nur spezifisch den Hi-Counter:
-
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /counters/hiCount {
-      allow read, write: if true;
-    }
-  }
-}
-```
-
-Nach dem Ändern der Rules sollte der Hi-Counter synchronisiert funktionieren!
+## Nach der Bereitstellung
+Das Content Management Dashboard sollte voll funktionsfähig sein:
+- Profile-Daten können aktualisiert werden
+- Social Links können geändert werden
+- Änderungen werden live auf der Hauptseite reflektiert
+- Aktivitäten-Log funktioniert für den Admin

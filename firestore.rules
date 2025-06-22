@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Hi-Counter: Öffentlich lesbar, nur authentifizierte Benutzer können schreiben
+    match /counters/{document} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    // Content-Sammlung: Öffentlich lesbar, nur Admin kann schreiben
+    match /content/{document} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.email == 'stuff@itslian.de';
+    }
+    
+    // Admin-Logs: Nur Admin kann lesen und schreiben
+    match /admin_logs/{document} {
+      allow read, write: if request.auth != null && request.auth.token.email == 'stuff@itslian.de';
+    }
+    
+    // Standardregel: Authentifizierte Benutzer können ihre eigenen Daten verwalten
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

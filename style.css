@@ -220,7 +220,7 @@ body::before {
     display: inline-block;
 }
 
-/* Say Hi Button - Ultra Modern */
+/* Say Hi Button - Simplified */
 .say-hi-btn {
     background: var(--accent-primary);
     border: 1px solid var(--accent-primary);
@@ -230,54 +230,32 @@ body::before {
     font-weight: 700;
     font-size: 1rem;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+    transition: all 0.3s ease;
     margin-bottom: 2rem;
     display: inline-flex;
     align-items: center;
     gap: 12px;
-    position: relative;
-    overflow: hidden;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     min-width: 200px;
     justify-content: center;
-    box-shadow: 
-        0 8px 32px rgba(0, 212, 255, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-.say-hi-btn::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: var(--accent-secondary);
-    opacity: 0;
-    transition: all 0.3s ease;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .say-hi-btn:hover {
-    transform: translateY(-4px) scale(1.05);
-    box-shadow: 
-        0 16px 48px rgba(0, 212, 255, 0.5),
-        0 0 60px var(--glow-cyan),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
-}
-
-.say-hi-btn:hover::before {
-    opacity: 1;
+    transform: translateY(-2px);
+    background: var(--accent-secondary);
+    border-color: var(--accent-secondary);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .say-hi-btn:active {
-    transform: translateY(-2px) scale(1.02);
-}
-
-.say-hi-btn > * {
-    position: relative;
-    z-index: 1;
+    transform: translateY(-1px);
 }
 
 .say-hi-btn.disabled {
-    background: linear-gradient(135deg, #2a2a3a, #3a3a4a);
+    background: #3a3a4a;
+    border-color: #3a3a4a;
     cursor: not-allowed;
     opacity: 0.6;
     transform: none !important;
@@ -286,6 +264,8 @@ body::before {
 
 .say-hi-btn.disabled:hover {
     transform: none !important;
+    background: #3a3a4a;
+    border-color: #3a3a4a;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
@@ -701,7 +681,7 @@ body::before {
     font-weight: 700;
     font-size: 1rem;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+    transition: all 0.3s ease;
     margin-bottom: 2rem;
     display: flex;
     align-items: center;
@@ -709,17 +689,14 @@ body::before {
     gap: 12px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    box-shadow: 
-        0 8px 32px rgba(0, 212, 255, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .login-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 
-        0 12px 40px rgba(0, 212, 255, 0.4),
-        0 0 40px var(--glow-cyan),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    background: var(--accent-secondary);
+    border-color: var(--accent-secondary);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .login-btn:disabled {
@@ -730,9 +707,9 @@ body::before {
 
 .login-btn:disabled:hover {
     transform: none;
-    box-shadow: 
-        0 8px 32px rgba(0, 212, 255, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 /* Status Messages */
@@ -1369,7 +1346,7 @@ body::before {
     font-weight: 700;
     font-size: 1rem;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+    transition: all 0.3s ease;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1377,19 +1354,14 @@ body::before {
     margin-top: 1rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 
-        0 8px 32px rgba(0, 212, 255, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .admin-login-btn:hover:not(:disabled) {
-    transform: translateY(-3px);
-    box-shadow: 
-        0 16px 48px rgba(0, 212, 255, 0.4),
-        0 0 60px rgba(0, 212, 255, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+    background: var(--accent-secondary);
+    border-color: var(--accent-secondary);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .admin-login-btn:active:not(:disabled) {
