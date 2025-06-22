@@ -231,8 +231,183 @@
             resetBtn.addEventListener('click', handleResetCounter);
         }
 
+        // Manual Counter Controls
+        setupCounterControls();
+        
+        // Content Management
+        setupContentManagement();
+
         // Quick Actions
         setupQuickActions();
+    }
+
+    // Counter Controls einrichten
+    function setupCounterControls() {
+        const setCounterBtn = document.getElementById('setCounterBtn');
+        const addOneBtn = document.getElementById('addOneBtn');
+        const removeOneBtn = document.getElementById('removeOneBtn');
+        const manualInput = document.getElementById('manualCountInput');
+
+        if (setCounterBtn) {
+            setCounterBtn.addEventListener('click', () => {
+                const newValue = parseInt(manualInput.value);
+                if (!isNaN(newValue) && newValue >= 0) {
+                    setCounterValue(newValue);
+                } else {
+                    showNotification('Bitte gültigen Wert eingeben', 'error');
+                }
+            });
+        }
+
+        if (addOneBtn) {
+            addOneBtn.addEventListener('click', () => adjustCounter(1));
+        }
+
+        if (removeOneBtn) {
+            removeOneBtn.addEventListener('click', () => adjustCounter(-1));
+        }
+    }
+
+    // Content Management einrichten
+    function setupContentManagement() {
+        const updateProfileBtn = document.getElementById('updateProfileBtn');
+        const updateLinksBtn = document.getElementById('updateLinksBtn');
+
+        if (updateProfileBtn) {
+            updateProfileBtn.addEventListener('click', handleUpdateProfile);
+        }
+
+        if (updateLinksBtn) {
+            updateLinksBtn.addEventListener('click', handleUpdateLinks);
+        }
+
+        // Lade aktuelle Content-Daten
+        loadCurrentContent();
+    }
+
+    // Counter-Wert setzen
+    async function setCounterValue(value) {
+        if (!db) return;
+
+        try {
+            const hiCountRef = db.collection('counters').doc('hiCount');
+            await hiCountRef.update({
+                count: value,
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+                lastModifiedBy: currentUser.email
+            });
+
+            await logAdminActivity('counter_set', { newValue: value });
+            showNotification(`Counter auf ${value} gesetzt`, 'success');
+
+        } catch (error) {
+            console.error('Fehler beim Setzen des Counters:', error);
+            showNotification('Fehler beim Setzen des Counters', 'error');
+        }
+    }
+
+    // Counter anpassen (+1 oder -1)
+    async function adjustCounter(adjustment) {
+        if (!db) return;
+
+        try {
+            const hiCountRef = db.collection('counters').doc('hiCount');
+            await hiCountRef.update({
+                count: firebase.firestore.FieldValue.increment(adjustment),
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+                lastModifiedBy: currentUser.email
+            });
+
+            await logAdminActivity('counter_adjust', { adjustment });
+            showNotification(`Counter ${adjustment > 0 ? '+' : ''}${adjustment}`, 'success');
+
+        } catch (error) {
+            console.error('Fehler beim Anpassen des Counters:', error);
+            showNotification('Fehler beim Anpassen des Counters', 'error');
+        }
+    }
+
+    // Profile-Update verarbeiten
+    async function handleUpdateProfile() {
+        const name = document.getElementById('profileName').value;
+        const pronouns = document.getElementById('profilePronouns').value;
+        const avatarUrl = document.getElementById('avatarUrl').value;
+
+        if (!name.trim()) {
+            showNotification('Name ist erforderlich', 'error');
+            return;
+        }
+
+        try {
+            const profileRef = db.collection('content').doc('profile');
+            await profileRef.set({
+                name: name.trim(),
+                pronouns: pronouns.trim(),
+                avatarUrl: avatarUrl.trim(),
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedBy: currentUser.email
+            }, { merge: true });
+
+            await logAdminActivity('profile_update', { name, pronouns, avatarUrl });
+            showNotification('Profile erfolgreich aktualisiert', 'success');
+
+        } catch (error) {
+            console.error('Fehler beim Aktualisieren des Profiles:', error);
+            showNotification('Fehler beim Aktualisieren des Profiles', 'error');
+        }
+    }
+
+    // Links-Update verarbeiten
+    async function handleUpdateLinks() {
+        const instagram = document.getElementById('instagramLink').value;
+        const pronounPage = document.getElementById('pronounPageLink').value;
+        const spotify = document.getElementById('spotifyLink').value;
+
+        try {
+            const linksRef = db.collection('content').doc('socialLinks');
+            await linksRef.set({
+                instagram: instagram.trim(),
+                pronounPage: pronounPage.trim(),
+                spotify: spotify.trim(),
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedBy: currentUser.email
+            }, { merge: true });
+
+            await logAdminActivity('links_update', { instagram, pronounPage, spotify });
+            showNotification('Social Links erfolgreich aktualisiert', 'success');
+
+        } catch (error) {
+            console.error('Fehler beim Aktualisieren der Links:', error);
+            showNotification('Fehler beim Aktualisieren der Links', 'error');
+        }
+    }
+
+    // Aktuellen Content laden
+    async function loadCurrentContent() {
+        if (!db) return;
+
+        try {
+            // Profile-Daten laden
+            const profileDoc = await db.collection('content').doc('profile').get();
+            if (profileDoc.exists) {
+                const data = profileDoc.data();
+                document.getElementById('profileName').value = data.name || '';
+                document.getElementById('profilePronouns').value = data.pronouns || '';
+                document.getElementById('avatarUrl').value = data.avatarUrl || '';
+            }
+
+            // Social Links laden
+            const linksDoc = await db.collection('content').doc('socialLinks').get();
+            if (linksDoc.exists) {
+                const data = linksDoc.data();
+                document.getElementById('instagramLink').value = data.instagram || '';
+                document.getElementById('pronounPageLink').value = data.pronounPage || '';
+                document.getElementById('spotifyLink').value = data.spotify || '';
+            }
+
+        } catch (error) {
+            console.error('Fehler beim Laden des Contents:', error);
+        }
     }
 
     // Quick Actions einrichten

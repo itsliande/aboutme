@@ -326,6 +326,85 @@ function getTimeUntilNextHi() {
     return { hours, minutes };
 }
 
+// Lade Content von Firebase (erweitert für Admin-Updates)
+async function loadContentFromFirebase() {
+    if (!window.firestoreDb) return;
+
+    try {
+        // Profile-Daten laden
+        const profileDoc = await window.firestoreDb.collection('content').doc('profile').get();
+        if (profileDoc.exists) {
+            const data = profileDoc.data();
+            updateProfileDisplay(data);
+        }
+
+        // Social Links laden
+        const linksDoc = await window.firestoreDb.collection('content').doc('socialLinks').get();
+        if (linksDoc.exists) {
+            const data = linksDoc.data();
+            updateSocialLinks(data);
+        }
+
+        // Echtzeitaktualisierungen für Profile
+        window.firestoreDb.collection('content').doc('profile').onSnapshot((doc) => {
+            if (doc.exists) {
+                updateProfileDisplay(doc.data());
+            }
+        });
+
+        // Echtzeitaktualisierungen für Links
+        window.firestoreDb.collection('content').doc('socialLinks').onSnapshot((doc) => {
+            if (doc.exists) {
+                updateSocialLinks(doc.data());
+            }
+        });
+
+    } catch (error) {
+        console.error('Fehler beim Laden des Contents:', error);
+    }
+}
+
+// Profile Display aktualisieren
+function updateProfileDisplay(data) {
+    if (data.name) {
+        const nameEl = document.querySelector('.name');
+        if (nameEl) nameEl.textContent = data.name;
+    }
+
+    if (data.pronouns) {
+        const pronounsEl = document.querySelector('.pronouns');
+        if (pronounsEl) pronounsEl.textContent = data.pronouns;
+    }
+
+    if (data.avatarUrl) {
+        const avatarEl = document.querySelector('.avatar');
+        if (avatarEl) {
+            avatarEl.src = data.avatarUrl;
+            avatarEl.onerror = () => {
+                avatarEl.src = 'https://i.imgur.com/placeholder.jpg';
+            };
+        }
+    }
+}
+
+// Social Links aktualisieren
+function updateSocialLinks(data) {
+    if (data.instagram) {
+        const instagramEl = document.querySelector('.social-btn.instagram');
+        if (instagramEl) instagramEl.href = data.instagram;
+    }
+
+    if (data.pronounPage) {
+        const pronounEl = document.querySelector('.social-btn.pronoun');
+        if (pronounEl) pronounEl.href = data.pronounPage;
+    }
+
+    if (data.spotify) {
+        const spotifyEl = document.querySelector('.social-btn.spotify');
+        if (spotifyEl) spotifyEl.href = data.spotify;
+    }
+}
+
 // Page Load Animation
 document.addEventListener('DOMContentLoaded', function() {
     // Firebase Status sofort prüfen
@@ -375,6 +454,7 @@ window.addEventListener('firebaseReady', function() {
         appAvailable: !!window.firebaseApp
     });
     loadHiCount();
+    loadContentFromFirebase(); // Lade auch Content von Firebase
 });
 
 // Kontinuierliche Überprüfung für Firebase Status
@@ -402,5 +482,7 @@ const firebaseChecker = setInterval(() => {
         }
     }
 }, 500);
+
+//# sourceMappingURL=main.js.map
 
 
