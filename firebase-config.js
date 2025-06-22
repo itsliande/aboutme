@@ -23,10 +23,12 @@
             // Firebase initialisieren
             const app = firebase.initializeApp(firebaseConfig);
             const db = firebase.firestore();
+            const auth = firebase.auth();
 
             console.log('Firebase erfolgreich initialisiert');
             console.log('Firebase App:', app);
             console.log('Firestore DB:', db);
+            console.log('Firebase Auth:', auth);
 
             // Teste Firestore Verbindung mit korrekter Collection
             const testRef = db.collection('counters').doc('hiCount');
@@ -45,6 +47,7 @@
             // Globale Firebase-Variablen für script.js
             window.firebaseApp = app;
             window.firestoreDb = db;
+            window.firebaseAuth = auth;
             window.firebaseLoaded = true;
 
             // Event für erfolgreiche Initialisierung
