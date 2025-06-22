@@ -143,15 +143,6 @@ function animateCounter() {
     }, 300);
 }
 
-// Fallback: Lade Hi-Counter aus localStorage
-function loadHiCountFromLocal() {
-    const saved = localStorage.getItem('hiCount');
-    if (saved) {
-        hiCount = parseInt(saved);
-        document.getElementById('hiCount').textContent = hiCount;
-    }
-}
-
 // Cleanup beim Verlassen der Seite
 function cleanup() {
     if (unsubscribeHiCount) {
