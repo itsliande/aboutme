@@ -28,16 +28,17 @@
             console.log('Firebase App:', app);
             console.log('Firestore DB:', db);
 
-            // Teste Firestore Verbindung
-            const testRef = db.collection('test').doc('connection');
+            // Teste Firestore Verbindung mit korrekter Collection
+            const testRef = db.collection('counters').doc('hiCount');
             testRef.get().then(() => {
                 console.log('✅ Firestore Verbindung erfolgreich');
+                console.log('✅ Security Rules korrekt konfiguriert');
             }).catch((error) => {
                 console.error('❌ Firestore Verbindung fehlgeschlagen:', error);
                 console.error('Mögliche Ursachen:');
-                console.error('1. Firestore Security Rules zu restriktiv');
-                console.error('2. API-Key ungültig');
-                console.error('3. Projekt-ID falsch');
+                console.error('1. Firestore Security Rules noch nicht veröffentlicht');
+                console.error('2. Cache-Problem - warte 1-2 Minuten');
+                console.error('3. API-Key ungültig');
             });
 
             // Globale Firebase-Variablen für script.js
