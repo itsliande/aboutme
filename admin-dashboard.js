@@ -403,6 +403,16 @@
             // Update main website immediately if same domain
             updateMainWebsite('profile', profileData);
 
+            // Force reload content on main website if possible
+            if (window.opener && !window.opener.closed) {
+                try {
+                    window.opener.loadContentFromFirebase();
+                    console.log('✅ Hauptwebsite Content neu geladen');
+                } catch (e) {
+                    console.log('ℹ️ Hauptwebsite Content-Reload nicht möglich:', e.message);
+                }
+            }
+
         } catch (error) {
             console.error('Fehler beim Aktualisieren des Profiles:', error);
             
@@ -463,6 +473,16 @@
 
             // Update main website immediately if same domain
             updateMainWebsite('links', linksData);
+
+            // Force reload content on main website if possible
+            if (window.opener && !window.opener.closed) {
+                try {
+                    window.opener.loadContentFromFirebase();
+                    console.log('✅ Hauptwebsite Content neu geladen');
+                } catch (e) {
+                    console.log('ℹ️ Hauptwebsite Content-Reload nicht möglich:', e.message);
+                }
+            }
 
         } catch (error) {
             console.error('Fehler beim Aktualisieren der Links:', error);

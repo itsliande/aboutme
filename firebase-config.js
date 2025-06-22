@@ -60,8 +60,20 @@
             window.firebaseLoaded = true;
 
             // Event für erfolgreiche Initialisierung
-            window.dispatchEvent(new CustomEvent('firebaseReady'));
+            const event = new CustomEvent('firebaseReady', { 
+                detail: { app, db, auth } 
+            });
+            window.dispatchEvent(event);
             console.log('🔥 FirebaseReady Event dispatched');
+            
+            // Zusätzlicher Event nach kurzer Verzögerung für sicheren Empfang
+            setTimeout(() => {
+                const retryEvent = new CustomEvent('firebaseReady', { 
+                    detail: { app, db, auth } 
+                });
+                window.dispatchEvent(retryEvent);
+                console.log('🔥 FirebaseReady Retry Event dispatched');
+            }, 100);
             
         } catch (error) {
             console.error('❌ Firebase Initialisierung fehlgeschlagen:', error);

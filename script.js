@@ -328,39 +328,36 @@ function getTimeUntilNextHi() {
 
 // Lade Content von Firebase (erweitert für Admin-Updates)
 async function loadContentFromFirebase() {
-    if (!window.firestoreDb) return;
+    if (!window.firestoreDb) {
+        console.warn('Firestore nicht verfügbar - setze Standard-Werte');
+        return;
+    }
+
+    console.log('🔄 Lade Content von Firebase...');
 
     try {
         // Profile-Daten laden
         const profileDoc = await window.firestoreDb.collection('content').doc('profile').get();
         if (profileDoc.exists) {
             const data = profileDoc.data();
+            console.log('✅ Profile-Daten geladen:', data);
             updateProfileDisplay(data);
+        } else {
+            console.log('ℹ️ Kein Profile-Dokument gefunden - verwende Standard-HTML-Werte');
         }
 
         // Social Links laden
         const linksDoc = await window.firestoreDb.collection('content').doc('socialLinks').get();
         if (linksDoc.exists) {
             const data = linksDoc.data();
+            console.log('✅ Social-Links geladen:', data);
             updateSocialLinks(data);
+        } else {
+            console.log('ℹ️ Kein Social-Links-Dokument gefunden - verwende Standard-HTML-Werte');
         }
 
-        // Echtzeitaktualisierungen für Profile
-        window.firestoreDb.collection('content').doc('profile').onSnapshot((doc) => {
-            if (doc.exists) {
-                updateProfileDisplay(doc.data());
-            }
-        });
-
-        // Echtzeitaktualisierungen für Links
-        window.firestoreDb.collection('content').doc('socialLinks').onSnapshot((doc) => {
-            if (doc.exists) {
-                updateSocialLinks(doc.data());
-            }
-        });
-
     } catch (error) {
-        console.error('Fehler beim Laden des Contents:', error);
+        console.error('❌ Fehler beim Laden des Contents:', error);
     }
 }
 
@@ -407,7 +404,12 @@ function updateSocialLinks(data) {
 
 // Echtzeit-Updates für Content
 function setupContentRealtimeUpdates() {
-    if (!window.firestoreDb) return;
+    if (!window.firestoreDb) {
+        console.warn('Firestore nicht verfügbar - keine Echtzeit-Updates möglich');
+        return;
+    }
+
+    console.log('🔄 Richte Echtzeit-Updates für Content ein...');
 
     try {
         // Profile Updates überwachen
@@ -416,7 +418,10 @@ function setupContentRealtimeUpdates() {
                 const data = doc.data();
                 updateProfileDisplay(data);
                 console.log('✅ Profile live aktualisiert:', data);
+                showNotification('Profile aktualisiert! 🔄', 'success');
             }
+        }, (error) => {
+            console.error('Fehler bei Profile Echtzeit-Updates:', error);
         });
 
         // Social Links Updates überwachen  
@@ -425,11 +430,16 @@ function setupContentRealtimeUpdates() {
                 const data = doc.data();
                 updateSocialLinks(data);
                 console.log('✅ Social Links live aktualisiert:', data);
+                showNotification('Social Links aktualisiert! 🔗', 'success');
             }
+        }, (error) => {
+            console.error('Fehler bei Social Links Echtzeit-Updates:', error);
         });
 
+        console.log('✅ Echtzeit-Updates erfolgreich eingerichtet');
+
     } catch (error) {
-        console.error('Fehler bei Echtzeit-Updates:', error);
+        console.error('❌ Fehler bei Echtzeit-Updates:', error);
     }
 }
 
@@ -438,9 +448,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Firebase Status sofort prüfen
     console.log('DOM geladen - prüfe Firebase Status...');
     if (window.firebaseLoaded && window.firestoreDb) {
-        console.log('🔄 Firebase bereits verfügbar - starte Hi-Counter');
+        console.log('🔄 Firebase bereits verfügbar - starte Hi-Counter und Content-Loading');
         firebaseReady = true;
         loadHiCount();
+        loadContentFromFirebase();
+        setupContentRealtimeUpdates();
     } else {
         console.log('⏳ Warte auf Firebase...');
     }
@@ -475,25 +487,31 @@ document.addEventListener('DOMContentLoaded', function() {
 // Firebase Ready Event Listener
 window.addEventListener('firebaseReady', function() {
     firebaseReady = true;
-    console.log('🎯 Firebase Ready Event empfangen - lade Hi-Counter');
+    console.log('🎯 Firebase Ready Event empfangen - lade Hi-Counter und Content');
     console.log('Firebase Status:', { 
         ready: firebaseReady, 
         dbAvailable: !!window.firestoreDb,
         appAvailable: !!window.firebaseApp
     });
+    
+    // Lade alle Firebase-Daten
     loadHiCount();
-    loadContentFromFirebase(); // Lade auch Content von Firebase
+    loadContentFromFirebase();
     
     // Echtzeitaktualisierungen für Content einrichten
     setupContentRealtimeUpdates();
+    
+    console.log('🔄 Content-Loading und Echtzeit-Updates initialisiert');
 });
 
 // Kontinuierliche Überprüfung für Firebase Status
 function checkFirebaseStatus() {
     if (window.firebaseLoaded && window.firestoreDb && !firebaseReady) {
-        console.log('🔄 Firebase Status erkannt - initialisiere Hi-Counter');
+        console.log('🔄 Firebase Status erkannt - initialisiere Hi-Counter und Content');
         firebaseReady = true;
         loadHiCount();
+        loadContentFromFirebase();
+        setupContentRealtimeUpdates();
         return true;
     }
     return false;
@@ -508,8 +526,9 @@ const firebaseChecker = setInterval(() => {
     if (checkFirebaseStatus() || checkCount >= 10) {
         clearInterval(firebaseChecker);
         if (checkCount >= 10 && !firebaseReady) {
-            console.log('⚠️  Firebase Timeout - verwende localStorage Fallback');
+            console.log('⚠️ Firebase Timeout - verwende localStorage Fallback');
             loadHiCountFromLocal();
+            console.log('⚠️ Content-Updates nur über Firebase verfügbar');
         }
     }
 }, 500);
