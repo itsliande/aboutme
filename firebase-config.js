@@ -23,12 +23,21 @@
             // Firebase initialisieren
             const app = firebase.initializeApp(firebaseConfig);
             const db = firebase.firestore();
-            const auth = firebase.auth();
+            
+            // Auth nur laden wenn verfügbar (für Admin-Seiten)
+            let auth = null;
+            if (typeof firebase.auth !== 'undefined') {
+                try {
+                    auth = firebase.auth();
+                    console.log('🔐 Firebase Auth verfügbar');
+                } catch (authError) {
+                    console.log('ℹ️ Firebase Auth nicht verfügbar (nur Firestore)');
+                }
+            }
 
             console.log('Firebase erfolgreich initialisiert');
             console.log('Firebase App:', app);
             console.log('Firestore DB:', db);
-            console.log('Firebase Auth:', auth);
 
             // Teste Firestore Verbindung mit korrekter Collection
             const testRef = db.collection('counters').doc('hiCount');
